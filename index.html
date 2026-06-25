@@ -3,326 +3,365 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SPE Cash Management — Soft Power Elevation</title>
-<meta name="theme-color" content="#16243F">
+<meta name="theme-color" content="#0E2A47">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
+<title>SPE Money Cash Manager</title>
 <style>
-  :root{
-    --navy:#16243F;--navy2:#1F365C;--blue:#2E5AAC;--blue-soft:#E8EEF8;
-    --grey:#F4F6F9;--grey2:#E3E8EF;--line:#D5DCE6;--ink:#222831;--muted:#5B6573;
-    --green:#1E7F4F;--amber:#B7791F;--red:#B4232A;
-  }
+  :root{--navy:#0E2A47;--navy2:#1F3D64;--blue:#2E6BE6;--blue-soft:#E8F0FE;--grey:#F4F6F9;--grey2:#E3E8EF;--line:#D5DCE6;--ink:#1D2433;--muted:#5B6573;--green:#1E7F4F;--amber:#B7791F;--red:#B4232A;}
   *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;}
   body{background:var(--grey);color:var(--ink);}
   button{cursor:pointer;font-size:14px;}
-  #login{position:fixed;inset:0;display:flex;background:linear-gradient(150deg,#16243F,#2E5AAC);}
-  #login .left{flex:1;display:flex;align-items:center;justify-content:center;color:#fff;flex-direction:column;}
-  #login .left .logo{width:84px;height:84px;border:3px solid #fff;border-radius:18px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:30px;}
-  #login .card{width:380px;background:#fff;border-radius:16px;padding:34px;margin:auto;box-shadow:0 20px 50px rgba(0,0,0,.3);}
-  @media(max-width:800px){#login .left{display:none}}
-  .field{margin:12px 0;}
-  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:600;}
-  .field input,.field select,.field textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px;outline:none;}
-  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--blue);}
-  .btn{background:var(--blue);color:#fff;border:none;padding:12px 18px;border-radius:9px;font-weight:600;}
-  .btn:hover{background:#244a8f;}
-  .btn.sec{background:#fff;color:var(--navy);border:1.5px solid var(--line);}
+  .btn{background:var(--blue);color:#fff;border:none;padding:12px 18px;border-radius:12px;font-weight:600;}
+  .btn:hover{background:#2457c0;} .btn.sec{background:#fff;color:var(--navy);border:1.5px solid var(--line);}
   .btn.green{background:var(--green);} .btn.red{background:var(--red);} .btn.navy{background:var(--navy2);}
-  .btn.sm{padding:7px 12px;font-size:13px;}
+  .btn.sm{padding:7px 12px;font-size:13px;border-radius:9px;}
+  .field{margin:11px 0;} .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:600;}
+  .field input,.field select,.field textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;outline:none;}
+  /* Login */
+  #login{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(150deg,#0E2A47,#2E6BE6);padding:20px;}
+  #login .card{background:#fff;border-radius:20px;padding:38px 32px;width:380px;max-width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+  #login .logo{width:74px;height:74px;border:3px solid var(--navy);border-radius:18px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:24px;color:var(--navy);margin:0 auto 16px;}
+  #login h1{font-size:22px;color:var(--navy);} #login .brand{letter-spacing:3px;color:var(--muted);font-size:11px;margin-top:4px;}
+  .gbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:24px;padding:13px;background:#fff;border:1.5px solid var(--line);border-radius:12px;font-weight:600;color:var(--ink);}
+  .gbtn:hover{background:var(--grey);}
+  .gbtn img{width:20px;height:20px;}
+  /* App */
   #app{display:none;min-height:100vh;}
-  header{background:var(--navy);color:#fff;display:flex;align-items:center;padding:0 18px;height:58px;gap:12px;position:sticky;top:0;z-index:20;}
-  header .logo{width:30px;height:30px;border:2px solid #fff;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;}
-  header .title{font-weight:700;}
-  header .spacer{flex:1;}
-  header select{background:var(--navy2);color:#fff;border:1px solid #34507f;border-radius:8px;padding:7px 10px;}
-  header .chip{background:var(--navy2);padding:6px 11px;border-radius:20px;font-size:13px;}
-  .bell{position:relative;background:transparent;border:1px solid #34507f;color:#fff;border-radius:8px;padding:7px 10px;display:none;align-items:center;}
+  header{background:var(--navy);color:#fff;display:flex;align-items:center;padding:0 16px;height:58px;gap:10px;position:sticky;top:0;z-index:20;}
+  header .logo{width:30px;height:30px;border:2px solid #fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;}
+  header .title{font-weight:700;} header .spacer{flex:1;}
+  header .chip{background:var(--navy2);padding:6px 11px;border-radius:20px;font-size:13px;display:flex;align-items:center;gap:7px;}
+  header .chip img{width:22px;height:22px;border-radius:50%;}
+  .bell{position:relative;background:transparent;border:1px solid #34537f;color:#fff;border-radius:9px;padding:7px 10px;display:none;}
   .bell .dot{position:absolute;top:-7px;right:-7px;background:var(--red);color:#fff;border-radius:10px;min-width:17px;height:17px;font-size:10px;display:none;align-items:center;justify-content:center;padding:0 3px;font-weight:700;}
-  .layout{display:flex;}
-  nav{width:230px;background:#fff;border-right:1px solid var(--line);min-height:calc(100vh - 58px);padding:14px 10px;flex-shrink:0;}
-  nav a{display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:9px;color:var(--ink);text-decoration:none;font-size:14px;margin-bottom:3px;font-weight:500;}
-  nav a:hover{background:var(--grey);}
-  nav a.active{background:var(--blue-soft);color:var(--blue);font-weight:700;}
-  nav a .ic{font-size:17px;width:20px;text-align:center;}
-  main{flex:1;padding:26px;max-width:1100px;}
-  @media(max-width:760px){nav{display:none}main{padding:16px}}
-  h1{font-size:23px;color:var(--navy);margin-bottom:3px;}
-  .sub{color:var(--muted);font-size:14px;margin-bottom:20px;}
-  .grid{display:grid;gap:14px;}
-  .kpis{grid-template-columns:repeat(auto-fit,minmax(200px,1fr));}
-  .card{background:#fff;border-radius:14px;box-shadow:0 2px 10px rgba(22,36,63,.06);padding:18px;}
-  .kpi .ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:12px;}
-  .kpi .lbl{color:var(--muted);font-size:13px;}
-  .kpi .val{font-size:22px;font-weight:800;color:var(--navy);margin-top:3px;}
-  table{width:100%;border-collapse:collapse;font-size:13.5px;}
-  th{background:var(--navy);color:#fff;text-align:left;padding:9px 11px;font-weight:600;font-size:12.5px;}
-  td{border-bottom:1px solid var(--line);padding:9px 11px;}
-  tr:last-child td{border-bottom:none;}
+  .layout{display:flex;} nav{width:225px;background:#fff;border-right:1px solid var(--line);min-height:calc(100vh - 58px);padding:14px 10px;flex-shrink:0;}
+  nav a{display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:10px;color:var(--ink);text-decoration:none;font-size:14px;margin-bottom:3px;font-weight:500;}
+  nav a:hover{background:var(--grey);} nav a.active{background:var(--blue-soft);color:var(--blue);font-weight:700;} nav a .ic{font-size:17px;width:20px;text-align:center;}
+  main{flex:1;padding:24px;max-width:1100px;} @media(max-width:760px){nav{display:none}main{padding:16px}}
+  h1{font-size:23px;color:var(--navy);margin-bottom:3px;} .sub{color:var(--muted);font-size:14px;margin-bottom:18px;}
+  .grid{display:grid;gap:14px;} .kpis{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));}
+  .card{background:#fff;border-radius:16px;box-shadow:0 2px 10px rgba(14,42,71,.06);padding:18px;}
+  .kpi .ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:12px;}
+  .kpi .lbl{color:var(--muted);font-size:13px;} .kpi .val{font-size:22px;font-weight:800;color:var(--navy);margin-top:3px;}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;} th{background:var(--navy);color:#fff;text-align:left;padding:9px 11px;font-weight:600;font-size:12.5px;}
+  td{border-bottom:1px solid var(--line);padding:9px 11px;} tr:last-child td{border-bottom:none;}
   .sectitle{font-size:16px;font-weight:700;color:var(--navy);margin:22px 0 10px;}
   .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:700;margin:1px;}
-  .b-amber{background:#FBF1DC;color:var(--amber);} .b-green{background:#E2F3EA;color:var(--green);}
-  .b-red{background:#F8E3E4;color:var(--red);} .b-blue{background:var(--blue-soft);color:var(--blue);}
-  .b-grey{background:var(--grey2);color:var(--muted);} .b-navy{background:#dfe6f1;color:var(--navy);}
+  .b-amber{background:#FAEEDA;color:var(--amber);} .b-green{background:#E2F3EA;color:var(--green);} .b-red{background:#F8E3E4;color:var(--red);} .b-blue{background:var(--blue-soft);color:var(--blue);} .b-grey{background:var(--grey2);color:var(--muted);}
   .toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
-  .modal-bg{position:fixed;inset:0;background:rgba(16,26,48,.55);display:none;align-items:center;justify-content:center;z-index:50;padding:16px;}
-  .modal-bg.show{display:flex;}
-  .modal{background:#fff;border-radius:16px;padding:24px;width:460px;max-width:100%;max-height:92vh;overflow:auto;}
-  .modal h3{color:var(--navy);margin-bottom:14px;}
+  .modal-bg{position:fixed;inset:0;background:rgba(14,26,48,.55);display:none;align-items:center;justify-content:center;z-index:50;padding:16px;}
+  .modal-bg.show{display:flex;} .modal{background:#fff;border-radius:18px;padding:24px;width:460px;max-width:100%;max-height:92vh;overflow:auto;} .modal h3{color:var(--navy);margin-bottom:14px;}
   .modal .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap;}
   .sigpad{border:1px solid var(--line);border-radius:10px;background:var(--grey);touch-action:none;width:100%;}
-  .filebox{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:7px 0;display:flex;align-items:center;gap:10px;font-size:13px;}
-  .filebox.ok{border-color:var(--green);background:#f2faf5;}
+  .filebox{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:7px 0;display:flex;align-items:center;gap:10px;font-size:13px;} .filebox.ok{border-color:var(--green);background:#f2faf5;}
   .ck{display:flex;gap:8px;align-items:center;margin:5px 0;font-size:13px;}
-  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:12px 20px;border-radius:10px;z-index:99;opacity:0;transition:.25s;font-size:14px;text-align:center;max-width:90%;}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:12px 20px;border-radius:12px;z-index:99;opacity:0;transition:.25s;font-size:14px;text-align:center;max-width:92%;}
   .toast.show{opacity:1;}
   .muted{color:var(--muted);font-size:13px;}
-  .note{background:var(--blue-soft);border:1px solid #C6D6EF;border-radius:10px;padding:11px 14px;font-size:13px;margin-bottom:14px;}
-  .note.warn{background:#FBF1DC;border-color:#EAD4A3;}
+  .note{background:var(--blue-soft);border:1px solid #C6D6EF;border-radius:10px;padding:11px 14px;font-size:13px;margin-bottom:14px;} .note.warn{background:#FAEEDA;border-color:#EAD4A3;}
+  #updateBar{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--navy);color:#fff;padding:12px 16px;display:none;align-items:center;justify-content:center;gap:14px;z-index:120;font-size:14px;}
+  #splash{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--grey);z-index:200;color:var(--muted);}
 </style>
 </head>
 <body>
+<div id="splash">Chargement…</div>
 
-<div id="login">
-  <div class="left">
-    <div class="logo">SPE</div>
-    <div style="letter-spacing:3px;margin-top:16px;opacity:.85;font-size:12px;">SOFT POWER ELEVATION</div>
-    <div style="font-size:30px;font-weight:300;margin-top:6px;">Cash Management</div>
-  </div>
+<div id="login" style="display:none;">
   <div class="card">
-    <h1 style="font-size:24px;">Connexion</h1>
-    <p class="muted" style="margin-bottom:6px;">Choisissez votre compte et entrez votre mot de passe</p>
-    <div class="field"><label>Compte</label><select id="loginUser"></select></div>
-    <div class="field"><label>Mot de passe</label><input id="loginPwd" type="password" placeholder="Mot de passe" onkeydown="if(event.key==='Enter')doLogin()"></div>
-    <button class="btn" style="width:100%;margin-top:6px;" onclick="doLogin()">Se connecter</button>
-    <p class="muted" style="margin-top:14px;text-align:center;">Comptes gérants : Chaima Blidi · Cherif Blidi · Belgacem Fourtie<br>Mot de passe initial : <b>spe1234</b></p>
+    <div class="logo">SPE</div>
+    <div class="brand">SOFT POWER ELEVATION</div>
+    <h1>Money Cash Manager</h1>
+    <p class="muted" style="margin-top:8px;">Connectez-vous avec votre compte Google</p>
+    <button class="gbtn" onclick="loginGoogle()"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">Se connecter avec Google</button>
+    <p class="muted" style="margin-top:16px;font-size:12px;">Seuls les comptes autorisés par l'administrateur peuvent accéder.</p>
   </div>
 </div>
 
 <div id="app">
   <header>
     <div class="logo">SPE</div>
-    <div class="title">SPE Cash Management</div>
+    <div class="title">Money Cash Manager</div>
     <div class="spacer"></div>
     <button class="bell" id="bell" onclick="openNotifs()">🔔<span class="dot"></span></button>
-    <button class="btn sm" id="installBtn" onclick="installApp()" style="display:none;background:#2E5AAC;color:#fff;border:none;">⬇ Installer l'app</button>
-    <button class="btn sm" onclick="modalGuide()" style="background:transparent;color:#fff;border:1px solid #34507f;">❓ Aide</button>
+    <button class="btn sm" onclick="modalGuide()" style="background:transparent;color:#fff;border:1px solid #34537f;">❓ Aide</button>
     <span class="chip" id="userChip"></span>
-    <button class="btn sm" onclick="logout()" style="background:transparent;color:#fff;border:1px solid #34507f;">Déconnexion</button>
+    <button class="btn sm" onclick="logout()" style="background:transparent;color:#fff;border:1px solid #34537f;">Déconnexion</button>
   </header>
-  <div class="layout">
-    <nav id="nav"></nav>
-    <main id="main"></main>
-  </div>
+  <div class="layout"><nav id="nav"></nav><main id="main"></main></div>
 </div>
 
 <div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
 <div class="toast" id="toast"></div>
+<div id="updateBar"><span>Une mise à jour est disponible.</span><button class="btn sm" style="background:#fff;color:var(--navy);" onclick="applyUpdate()">Mettre à jour</button></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
 <script>
-const M=1000;
-function fmt(mil){return (mil/M).toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:3})+' DT';}
+const firebaseConfig = {
+  apiKey: "AIzaSyCCQlCRWi1xXHg9riWfMc7nMuLwCoY2cR4",
+  authDomain: "spe-money-cash.firebaseapp.com",
+  projectId: "spe-money-cash",
+  storageBucket: "spe-money-cash.firebasestorage.app",
+  messagingSenderId: "477740796468",
+  appId: "1:477740796468:web:275beefd1517faabe25861"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+try{ db.enablePersistence({synchronizeTabs:true}).catch(()=>{}); }catch(e){}
+
+const ADMIN_EMAIL = "cherifch3ar@gmail.com";
+const M = 1000;
+const ALLPERMS = {dashboard:'Voir le tableau de bord',approve:'Approuver les dépenses',fund:'Alimenter la caisse',advance:'Transférer des avances',purchase:'Déclarer des achats',users:'Gérer les utilisateurs',reports:'Rapports',audit:'Audit'};
+function defaultPerms(role){return role==='admin'?Object.keys(ALLPERMS):role==='caissier'?['dashboard','fund','advance']:role==='responsable'?['dashboard','approve','reports']:role==='comptable'?['dashboard','reports','audit']:['dashboard','purchase'];}
+
+function fmt(mil){return ((mil||0)/M).toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:3})+' DT';}
 function parseDT(v){const n=parseFloat(String(v).replace(/\s/g,'').replace(',','.'));return isNaN(n)?0:Math.round(n*M);}
-function uid(){return 'id'+Math.random().toString(36).slice(2,9);}
 function now(){return new Date();}
-function dt(d){return d.toLocaleDateString('fr-FR')+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});}
-const ROLES={manager:'Gérant',responsable:'Responsable',comptable:'Comptable'};
-const ALLPERMS={dashboard:'Voir le tableau de bord',approve:'Approuver les dépenses',fund:'Alimenter la caisse (ajouter espèce)',advance:'Transférer des avances',purchase:'Déclarer des achats',users:'Gérer les utilisateurs',reports:'Générer les rapports',audit:"Consulter l'audit"};
-function defaultPerms(role){return role==='manager'?Object.keys(ALLPERMS):role==='comptable'?['dashboard','reports','audit']:['dashboard','purchase'];}
+function fmtTs(ts){const d=ts&&ts.toDate?ts.toDate():(ts instanceof Date?ts:new Date());return d.toLocaleDateString('fr-FR')+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove('show'),4000);}
 
-let state={currentUid:null,seq:0,
-  users:[
-    {uid:'u_chaima',prenom:'Chaima',nom:'Blidi',role:'manager',subtype:'Gérant administratif',fonction:'Gérant administratif',actif:true,email:'chaima@spe.tn',password:'spe1234',perms:Object.keys(ALLPERMS)},
-    {uid:'u_cherif',prenom:'Cherif',nom:'Blidi',role:'manager',subtype:'Gérant administratif',fonction:'Gérant administratif',actif:true,email:'cherif@spe.tn',password:'spe1234',perms:Object.keys(ALLPERMS)},
-    {uid:'u_belga',prenom:'Belgacem',nom:'Fourtie',role:'manager',subtype:'Associé',fonction:'Associé',actif:true,email:'belgacem@spe.tn',password:'spe1234',perms:Object.keys(ALLPERMS)}],
-  accounts:{general:{balance:0}},purchases:[],cashOps:[],audit:[],notifs:[]};
-state.users.forEach(u=>{if(u.role!=='comptable')state.accounts['acc_'+u.uid]={balance:0};});
+let ME=null;            // profil utilisateur courant (doc users)
+let CURRENT_VIEW='dashboard';
+let CACHE={users:[],cashboxes:{},purchases:[],notifs:[],audit:[],cashops:[]};
+let UNSUB=[];
 
-function user(id){return state.users.find(u=>u.uid===id);}
-function me(){return user(state.currentUid);}
-function can(p){const u=me();return !!(u&&u.perms&&u.perms.includes(p));}
+function can(p){return !!(ME&&ME.perms&&ME.perms.includes(p));}
 function priv(){return can('approve')||can('reports')||can('fund')||can('users');}
-function acc(id){return state.accounts[id]||(state.accounts[id]={balance:0});}
-function userName(id){const u=user(id);return u?(u.prenom+' '+(u.nom||'')).trim():id;}
-function approverLabel(u){return u?(u.subtype||ROLES[u.role]):'';}
-function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove('show'),3800);}
-function audit(action,entity,entityId,amount){state.audit.unshift({id:uid(),userUid:state.currentUid,action,entity,entityId,amount:amount||null,ip:'192.168.1.'+(10+Math.floor(Math.random()*40)),device:navigator.platform||'Web',at:now()});}
 
-function beep(){try{const a=new (window.AudioContext||window.webkitAudioContext)();const o=a.createOscillator();const g=a.createGain();o.connect(g);g.connect(a.destination);o.type='sine';g.gain.value=0.18;o.frequency.setValueAtTime(880,a.currentTime);o.frequency.setValueAtTime(660,a.currentTime+0.13);o.frequency.setValueAtTime(880,a.currentTime+0.26);o.start();o.stop(a.currentTime+0.4);}catch(e){}}
-function addNotif(title,body,link){state.notifs.unshift({id:uid(),title,body,link,read:false,at:now()});renderBell();}
-function unreadCount(){return state.notifs.filter(n=>!n.read).length;}
-function renderBell(){const b=document.getElementById('bell');if(!b||!me())return;b.style.display=can('approve')?'inline-flex':'none';const c=unreadCount();const d=b.querySelector('.dot');d.textContent=c;d.style.display=c>0?'flex':'none';}
-function openNotifs(){const list=state.notifs.map(n=>`<div class="filebox ${n.read?'':'ok'}" style="cursor:pointer" onclick="openNotif('${n.id}')"><span>🔔</span><div style="flex:1"><b>${n.title}</b><div class="muted">${n.body} · ${dt(n.at)}</div></div>${n.read?'':'<span class="badge b-red">nouveau</span>'}</div>`).join('')||'<p class="muted">Aucune notification</p>';openModal(`<h3>Notifications</h3>${list}<div class="actions"><button class="btn sec" onclick="closeModal()">Fermer</button></div>`);}
-function openNotif(id){const n=state.notifs.find(x=>x.id===id);if(n)n.read=true;closeModal();renderBell();go('validations');}
+// ---------------- AUTH ----------------
+function loginGoogle(){
+  const provider=new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(e=>{ if(e.code==='auth/popup-blocked'||e.code==='auth/cancelled-popup-request'){auth.signInWithRedirect(provider);} else {toast('Connexion annulée ou échouée.');} });
+}
+function logout(){ UNSUB.forEach(u=>{try{u()}catch(e){}});UNSUB=[]; auth.signOut(); }
 
-function fundCash(a,c,n){acc('general').balance+=a;state.cashOps.unshift({id:uid(),type:'entree',category:c,amount:a,to:'general',by:state.currentUid,at:now(),note:n});audit('ALIMENTER_CAISSE','account','general',a);}
-function transferAdvance(to,a,n){if(acc('general').balance<a){toast('Fonds insuffisants en caisse générale');return false;}acc('general').balance-=a;acc('acc_'+to).balance+=a;state.cashOps.unshift({id:uid(),type:'avance',category:'avance_utilisateur',amount:a,from:'general',to:'acc_'+to,by:state.currentUid,at:now(),note:n});audit('TRANSFERER_AVANCE','account','acc_'+to,a);return true;}
-function createPurchase(p){state.seq++;const ref='PA-'+now().getFullYear()+'-'+String(state.seq).padStart(6,'0');const pu={id:uid(),ref,...p,requestedBy:state.currentUid,status:'enAttente',accountId:'acc_'+state.currentUid,at:now(),approvedBy:null,approverType:null,approvedAt:null,reason:null,signature:null};state.purchases.unshift(pu);audit('CREER_ACHAT','purchase',ref,p.montant);addNotif('Nouvel achat à valider',ref+' · '+p.description+' · '+fmt(p.montant),pu.id);return pu;}
-function approvePurchase(id,sig){const p=state.purchases.find(x=>x.id===id);if(!p)return;if(!can('approve')){toast('Vous n\'avez pas la permission d\'approuver.');return;}if(p.requestedBy===state.currentUid){toast('Séparation des tâches : vous ne pouvez pas valider votre propre dépense.');return;}const credit=(p.mode==='credit');if(!credit&&acc(p.accountId).balance<p.montant){toast('Solde insuffisant sur le compte du responsable.');return;}if(!credit)acc(p.accountId).balance-=p.montant;p.status='approuve';p.approvedBy=state.currentUid;p.approverType=approverLabel(me());p.approvedAt=now();p.signature=sig;state.notifs.forEach(n=>{if(n.link===id)n.read=true;});audit(credit?'APPROUVER_ACHAT_CREDIT':'APPROUVER_ACHAT','purchase',p.ref,p.montant);if(sig)audit('SIGNER','purchase',p.ref);toast(credit?('Achat '+p.ref+' approuvé à crédit fournisseur (aucun décaissement).'):('Achat '+p.ref+' approuvé par '+p.approverType+'. Solde '+userName(p.requestedBy)+' : '+fmt(acc(p.accountId).balance)));render();}
-function rejectPurchase(id,r){const p=state.purchases.find(x=>x.id===id);if(!p)return;p.status='rejete';p.approvedBy=state.currentUid;p.approverType=approverLabel(me());p.approvedAt=now();p.reason=r;state.notifs.forEach(n=>{if(n.link===id)n.read=true;});audit('REJETER_ACHAT','purchase',p.ref);toast('Achat '+p.ref+' rejeté.');render();}
+auth.onAuthStateChanged(async (user)=>{
+  document.getElementById('splash').style.display='none';
+  if(!user){ ME=null; document.getElementById('app').style.display='none'; document.getElementById('login').style.display='flex'; return; }
+  // Résoudre le profil
+  try{
+    const email=(user.email||'').toLowerCase();
+    let prof=null;
+    // chercher par uid
+    const byUid=await db.collection('users').doc(user.uid).get();
+    if(byUid.exists){ prof={id:user.uid,...byUid.data()}; }
+    if(!prof){
+      // chercher par email (compte pré-autorisé par l'admin)
+      const q=await db.collection('users').where('email','==',email).limit(1).get();
+      if(!q.empty){ const d=q.docs[0]; prof={id:d.id,...d.data()};
+        // migrer vers doc indexé par uid
+        await db.collection('users').doc(user.uid).set({...d.data(),uid:user.uid,photoUrl:user.photoURL||d.data().photoUrl||null},{merge:true});
+        if(d.id!==user.uid){ try{await db.collection('users').doc(d.id).delete();}catch(e){} }
+        prof={id:user.uid,...d.data(),uid:user.uid};
+      }
+    }
+    if(!prof && email===ADMIN_EMAIL){
+      // bootstrap admin
+      const adminDoc={uid:user.uid,prenom:(user.displayName||'Admin').split(' ')[0],nom:'',email:email,role:'admin',perms:Object.keys(ALLPERMS),actif:true,photoUrl:user.photoURL||null,createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+      await db.collection('users').doc(user.uid).set(adminDoc);
+      await db.collection('cashboxes').doc('general').set({type:'generale',balance:0,currency:'DT'},{merge:true});
+      prof={id:user.uid,...adminDoc};
+    }
+    if(!prof){ // non autorisé
+      document.getElementById('app').style.display='none';
+      document.getElementById('login').style.display='flex';
+      document.getElementById('login').querySelector('.card').innerHTML='<div class="logo" style="margin:0 auto 16px;width:74px;height:74px;border:3px solid var(--navy);border-radius:18px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:24px;color:var(--navy);">SPE</div><h1 style="color:var(--navy);">Accès non autorisé</h1><p class="muted" style="margin-top:10px;">Le compte <b>'+email+'</b> n\'est pas encore autorisé. Demandez à l\'administrateur (Cherif) de créer votre compte avec cette adresse Gmail.</p><button class="btn" style="width:100%;margin-top:20px;" onclick="logout()">Se déconnecter</button>';
+      return;
+    }
+    if(prof.actif===false){ toast('Compte désactivé.'); logout(); return; }
+    ME=prof;
+    // s'assurer que la caisse user existe
+    if(prof.role!=='comptable'){ db.collection('cashboxes').doc('box_'+user.uid).set({type:'user',ownerUid:user.uid,balance:firebase.firestore.FieldValue.increment(0),currency:'DT'},{merge:true}).catch(()=>{}); }
+    audit('CONNEXION','user',user.uid);
+    startListeners();
+    document.getElementById('login').style.display='none';
+    document.getElementById('app').style.display='block';
+    CURRENT_VIEW='dashboard'; render();
+  }catch(e){ console.error(e); toast('Erreur de chargement du profil : '+e.message); }
+});
 
-let currentView='dashboard';
-function initLoginSelect(){document.getElementById('loginUser').innerHTML=state.users.map(u=>`<option value="${u.uid}">${userName(u.uid)} — ${approverLabel(u)}</option>`).join('');}
-function doLogin(){const id=document.getElementById('loginUser').value;const u=user(id);const pwd=(document.getElementById('loginPwd')||{}).value||'';if(u&&u.password&&u.password!==pwd){toast('Mot de passe incorrect (initial : spe1234).');return;}state.currentUid=id;enterApp();}
-function switchUser(id){state.currentUid=id;currentView='dashboard';render();}
-function logout(){document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';}
-function enterApp(){document.getElementById('login').style.display='none';document.getElementById('app').style.display='block';currentView='dashboard';render();}
-function navItems(){const items=[['dashboard','📊','Tableau de bord'],['purchases','🛍️','Achats']];if(can('fund')||can('advance'))items.push(['cash','💰','Caisse']);if(can('approve'))items.push(['validations','✅','Validations']);if(can('reports'))items.push(['reports','📈','Rapports']);if(can('users'))items.push(['users','👥','Utilisateurs']);if(can('audit'))items.push(['audit','🛡️','Audit']);items.push(['profile','👤','Profil']);return items;}
-function render(){document.getElementById('userChip').textContent=userName(state.currentUid)+' · '+approverLabel(me());document.getElementById('nav').innerHTML=navItems().map(([v,ic,lbl])=>`<a class="${v===currentView?'active':''}" onclick="go('${v}')"><span class="ic">${ic}</span>${lbl}</a>`).join('');document.getElementById('main').innerHTML=({dashboard:viewDashboard,purchases:viewPurchases,cash:viewCash,validations:viewValidations,reports:viewReports,users:viewUsers,audit:viewAudit,profile:viewProfile}[currentView]||viewDashboard)();renderBell();}
-function go(v){currentView=v;render();}
+// ---------------- LISTENERS TEMPS RÉEL ----------------
+function startListeners(){
+  UNSUB.forEach(u=>{try{u()}catch(e){}});UNSUB=[];
+  UNSUB.push(db.collection('users').onSnapshot(s=>{CACHE.users=s.docs.map(d=>({id:d.id,...d.data()}));softRender();},()=>{}));
+  UNSUB.push(db.collection('cashboxes').onSnapshot(s=>{CACHE.cashboxes={};s.docs.forEach(d=>CACHE.cashboxes[d.id]=d.data());softRender();},()=>{}));
+  UNSUB.push(db.collection('purchases').orderBy('createdAt','desc').limit(200).onSnapshot(s=>{CACHE.purchases=s.docs.map(d=>({id:d.id,...d.data()}));softRender();},()=>{}));
+  UNSUB.push(db.collection('cashOperations').orderBy('createdAt','desc').limit(100).onSnapshot(s=>{CACHE.cashops=s.docs.map(d=>({id:d.id,...d.data()}));softRender();},()=>{}));
+  UNSUB.push(db.collection('notifications').where('userUid','==',auth.currentUser.uid).limit(50).onSnapshot(s=>{CACHE.notifs=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));renderBell();if(CURRENT_VIEW)softRender();},()=>{}));
+  if(can('audit')) UNSUB.push(db.collection('auditLogs').orderBy('createdAt','desc').limit(100).onSnapshot(s=>{CACHE.audit=s.docs.map(d=>({id:d.id,...d.data()}));softRender();},()=>{}));
+}
+let _rt=null; function softRender(){ clearTimeout(_rt); _rt=setTimeout(()=>{ if(ME)render(); },120); }
 
-function kpi(ic,lbl,val,color){return `<div class="card kpi"><div class="ic" style="background:${color}1f;color:${color}">${ic}</div><div class="lbl">${lbl}</div><div class="val">${val}</div></div>`;}
-function statusBadge(s){return {enAttente:'<span class="badge b-amber">En attente</span>',approuve:'<span class="badge b-green">Approuvé</span>',rejete:'<span class="badge b-red">Rejeté</span>'}[s]||s;}
-function purchaseRow(p){return `<tr><td><b>${p.ref}</b></td><td>${p.description}</td><td>${userName(p.requestedBy)}</td><td style="font-weight:700;">${fmt(p.montant)}</td><td>${statusBadge(p.status)}</td></tr>`;}
-function emptyRow(t){return `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:18px;">${t}</td></tr>`;}
+// ---------------- HELPERS DONNÉES ----------------
+function userName(uid){const u=CACHE.users.find(x=>x.uid===uid||x.id===uid);return u?((u.prenom||'')+' '+(u.nom||'')).trim()||u.email:uid;}
+function userBy(uid){return CACHE.users.find(x=>x.uid===uid||x.id===uid);}
+function bal(id){return (CACHE.cashboxes[id]||{}).balance||0;}
+function audit(action,entity,entityId,amount){ if(!auth.currentUser)return; db.collection('auditLogs').add({userUid:auth.currentUser.uid,userName:(ME?((ME.prenom||'')+' '+(ME.nom||'')):auth.currentUser.email),action,entity,entityId:entityId||'',amount:amount||null,device:navigator.userAgent.slice(0,120),createdAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{}); }
+function notify(userUid,title,body){ db.collection('notifications').add({userUid,title,body,read:false,createdAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{}); }
 
-function weekStart(d){const x=new Date(d);const day=(x.getDay()+6)%7;x.setHours(0,0,0,0);x.setDate(x.getDate()-day);return x;}
-function fundingTotals(){const n=now();const ws=weekStart(n);let wk=0,mo=0,yr=0;state.cashOps.filter(o=>o.type==='entree').forEach(o=>{if(o.at.getFullYear()===n.getFullYear()){yr+=o.amount;if(o.at.getMonth()===n.getMonth())mo+=o.amount;if(o.at>=ws)wk+=o.amount;}});return {wk,mo,yr};}
-function fundingByUser(){const n=now();const map={};state.cashOps.filter(o=>o.type==='entree').forEach(o=>{map[o.by]=map[o.by]||{mois:0,annee:0};if(o.at.getFullYear()===n.getFullYear()){map[o.by].annee+=o.amount;if(o.at.getMonth()===n.getMonth())map[o.by].mois+=o.amount;}});return map;}
-function userStats(id){const n=now();const recu=state.cashOps.filter(o=>o.type==='avance'&&o.to==='acc_'+id).reduce((s,o)=>s+o.amount,0);const payeAnnee=state.purchases.filter(p=>p.requestedBy===id&&p.status==='approuve'&&p.mode!=='credit'&&p.approvedAt&&p.approvedAt.getFullYear()===n.getFullYear()).reduce((s,p)=>s+p.montant,0);const enAttente=state.purchases.filter(p=>p.requestedBy===id&&p.status==='enAttente').reduce((s,p)=>s+p.montant,0);const reste=acc('acc_'+id).balance;return {recu,payeAnnee,reste,aJustifier:reste,enAttente};}
+async function getIP(){ try{ const r=await fetch('https://api.ipify.org?format=json'); const j=await r.json(); return j.ip; }catch(e){ return 'inconnue'; } }
+function getGeo(){ return new Promise(res=>{ if(!navigator.geolocation)return res(null); navigator.geolocation.getCurrentPosition(p=>res({lat:+p.coords.latitude.toFixed(5),lng:+p.coords.longitude.toFixed(5)}),()=>res(null),{timeout:6000}); }); }
+
+// ---------------- OPÉRATIONS ----------------
+async function fundCash(amount,category,note){
+  const genRef=db.collection('cashboxes').doc('general');
+  await db.runTransaction(async tx=>{ const g=await tx.get(genRef); const b=(g.data()?.balance)||0; const nb=b+amount; tx.set(genRef,{type:'generale',balance:nb,currency:'DT'},{merge:true}); const op=db.collection('cashOperations').doc(); tx.set(op,{type:'entree',category,amount,to:'general',by:auth.currentUser.uid,note:note||null,createdAt:firebase.firestore.FieldValue.serverTimestamp()}); });
+  audit('ALIMENTER_CAISSE','cashbox','general',amount);
+}
+async function transferAdvance(toUid,amount,note){
+  const genRef=db.collection('cashboxes').doc('general'); const uRef=db.collection('cashboxes').doc('box_'+toUid);
+  await db.runTransaction(async tx=>{ const g=await tx.get(genRef); const gb=(g.data()?.balance)||0; if(gb<amount) throw new Error('Fonds insuffisants en caisse générale'); const u=await tx.get(uRef); const ub=(u.data()?.balance)||0; tx.set(genRef,{balance:gb-amount},{merge:true}); tx.set(uRef,{type:'user',ownerUid:toUid,balance:ub+amount,currency:'DT'},{merge:true}); const op=db.collection('cashOperations').doc(); tx.set(op,{type:'avance',category:'alimentation',amount,from:'general',to:'box_'+toUid,by:auth.currentUser.uid,note:note||null,createdAt:firebase.firestore.FieldValue.serverTimestamp()}); });
+  audit('TRANSFERER_AVANCE','cashbox','box_'+toUid,amount); notify(toUid,'Avance reçue','Une avance de '+fmt(amount)+' vous a été créditée.');
+}
+async function createPurchase(p){
+  const year=now().getFullYear();
+  const ref='PA-'+year+'-'+Date.now().toString().slice(-6);
+  const doc=await db.collection('purchases').add({ref,...p,buyerUid:auth.currentUser.uid,cashboxId:'box_'+auth.currentUser.uid,status:'en_attente',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  audit('CREER_ACHAT','purchase',ref,p.amount);
+  // notifier les approbateurs
+  CACHE.users.filter(u=>u.perms&&u.perms.includes('approve')&&u.actif!==false).forEach(u=>notify(u.uid,'Achat à valider',ref+' · '+p.description+' · '+fmt(p.amount)));
+  return doc.id;
+}
+async function decidePurchase(id,decision,extra){
+  const pRef=db.collection('purchases').doc(id);
+  await db.runTransaction(async tx=>{
+    const snap=await tx.get(pRef); if(!snap.exists)throw new Error('Achat introuvable'); const p=snap.data();
+    if(p.status!=='en_attente')throw new Error('Achat déjà traité');
+    if(p.buyerUid===auth.currentUser.uid)throw new Error('Séparation des tâches : vous ne pouvez pas valider votre propre achat');
+    if(decision==='approuve'){ const cbRef=db.collection('cashboxes').doc(p.cashboxId); const cb=await tx.get(cbRef); const b=(cb.data()?.balance)||0; if(b<p.amount)throw new Error('Solde insuffisant sur le compte de l\'acheteur'); tx.set(cbRef,{balance:b-p.amount},{merge:true}); }
+    tx.update(pRef,{status:decision,approverUid:auth.currentUser.uid,approverName:((ME.prenom||'')+' '+(ME.nom||'')).trim(),decidedAt:firebase.firestore.FieldValue.serverTimestamp(),...extra});
+    const ap=db.collection('approvals').doc(); tx.set(ap,{purchaseId:id,ref:p.ref,decision,approverUid:auth.currentUser.uid,...extra,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  });
+  const p=(await pRef.get()).data();
+  audit(decision==='approuve'?'APPROUVER_ACHAT':'REFUSER_ACHAT','purchase',p.ref,p.amount);
+  notify(p.buyerUid,'Achat '+(decision==='approuve'?'approuvé':'refusé'),p.ref+(decision==='refuse'?(' · motif : '+(extra.motif||'')):''));
+}
+
+// ---------------- RENDU ----------------
+function navItems(){const it=[['dashboard','📊','Tableau de bord'],['purchases','🛍️','Achats']];if(can('fund')||can('advance'))it.push(['cash','💰','Caisse']);if(can('approve'))it.push(['validations','✅','Validations']);if(can('reports'))it.push(['reports','📈','Rapports']);if(can('users'))it.push(['users','👥','Utilisateurs']);if(can('audit'))it.push(['audit','🛡️','Audit']);it.push(['profile','👤','Profil']);return it;}
+function go(v){CURRENT_VIEW=v;render();}
+function render(){
+  if(!ME)return;
+  const chip=document.getElementById('userChip'); chip.innerHTML=(ME.photoUrl?('<img src="'+ME.photoUrl+'">'):'')+((ME.prenom||'')+' · '+roleLabel(ME.role));
+  document.getElementById('nav').innerHTML=navItems().map(([v,ic,l])=>`<a class="${v===CURRENT_VIEW?'active':''}" onclick="go('${v}')"><span class="ic">${ic}</span>${l}</a>`).join('');
+  document.getElementById('main').innerHTML=({dashboard:viewDashboard,purchases:viewPurchases,cash:viewCash,validations:viewValidations,reports:viewReports,users:viewUsers,audit:viewAudit,profile:viewProfile}[CURRENT_VIEW]||viewDashboard)();
+  renderBell();
+}
+function roleLabel(r){return {admin:'Administrateur',caissier:'Caissier',acheteur:'Acheteur',responsable:'Responsable',comptable:'Comptable'}[r]||r;}
+function kpi(ic,l,v,c){return `<div class="card kpi"><div class="ic" style="background:${c}1f;color:${c}">${ic}</div><div class="lbl">${l}</div><div class="val">${v}</div></div>`;}
+function statusBadge(s){return {en_attente:'<span class="badge b-amber">En attente</span>',approuve:'<span class="badge b-green">Approuvé</span>',refuse:'<span class="badge b-red">Refusé</span>'}[s]||s;}
+function emptyRow(t,c){return `<tr><td colspan="${c||5}" style="text-align:center;color:var(--muted);padding:18px;">${t}</td></tr>`;}
 
 function viewDashboard(){
   const today=new Date().toDateString();
-  const P=priv();
-  const dayExp=state.purchases.filter(p=>p.status==='approuve'&&p.mode!=='credit'&&p.approvedAt&&p.approvedAt.toDateString()===today).reduce((s,p)=>s+p.montant,0);
-  const monExp=state.purchases.filter(p=>p.status==='approuve'&&p.mode!=='credit'&&p.approvedAt&&p.approvedAt.getMonth()===now().getMonth()).reduce((s,p)=>s+p.montant,0);
-  const pending=state.purchases.filter(p=>p.status==='enAttente').length;
-  const kpis=[];
-  if(P)kpis.push(kpi('🏦','Caisse générale',fmt(acc('general').balance),'var(--navy)'));
-  else kpis.push(kpi('👛','Mon solde',fmt(acc('acc_'+state.currentUid).balance),'var(--blue)'));
+  const appr=CACHE.purchases.filter(p=>p.status==='approuve');
+  const dayExp=appr.filter(p=>p.decidedAt&&p.decidedAt.toDate&&p.decidedAt.toDate().toDateString()===today).reduce((s,p)=>s+p.amount,0);
+  const monExp=appr.filter(p=>p.decidedAt&&p.decidedAt.toDate&&p.decidedAt.toDate().getMonth()===now().getMonth()).reduce((s,p)=>s+p.amount,0);
+  const pending=CACHE.purchases.filter(p=>p.status==='en_attente').length;
+  const P=priv(); const kpis=[];
+  if(P)kpis.push(kpi('🏦','Caisse générale',fmt(bal('general')),'var(--navy)')); else kpis.push(kpi('👛','Mon solde',fmt(bal('box_'+ME.uid)),'var(--blue)'));
   kpis.push(kpi('📅','Dépenses du jour',fmt(dayExp),'var(--amber)'));
   kpis.push(kpi('🗓️','Dépenses du mois',fmt(monExp),'var(--green)'));
   kpis.push(kpi('⏳','En attente',pending,'var(--red)'));
-  const ft=fundingTotals();
-  const fundTiles=`<div class="sectitle">Fond de caisse alimenté</div><div class="grid kpis">
-    ${kpi('📆','Cette semaine',fmt(ft.wk),'var(--blue)')}
-    ${kpi('🗓️','Ce mois',fmt(ft.mo),'var(--navy2)')}
-    ${kpi('📅','Cette année',fmt(ft.yr),'var(--navy)')}</div>`;
-  let byWho='';
-  if(P){
-    const fb=fundingByUser();
-    const rows=Object.entries(fb).map(([k,v])=>`<tr><td>${userName(k)} <span class="muted">(${approverLabel(user(k))})</span></td><td style="text-align:right;">${fmt(v.mois)}</td><td style="text-align:right;font-weight:700;">${fmt(v.annee)}</td></tr>`).join('')||emptyRow('Aucune alimentation');
-    byWho=`<div class="sectitle">Alimentations par gérant — qui a alimenté</div><div class="card"><table>
-      <tr><th>Gérant</th><th style="text-align:right;">Ce mois</th><th style="text-align:right;">Cette année</th></tr>${rows}</table></div>`;
-  }
-  let outTable='';
-  if(P){
-    const rows=state.users.filter(u=>u.role!=='comptable').map(u=>{const st=userStats(u.uid);return `<tr style="cursor:pointer" onclick="modalUserDetail('${u.uid}')">
-      <td>${userName(u.uid)}</td><td style="text-align:right;">${fmt(st.recu)}</td><td style="text-align:right;">${fmt(st.payeAnnee)}</td>
-      <td style="text-align:right;font-weight:700;">${fmt(st.reste)}</td>
-      <td style="text-align:right;">${st.aJustifier>0?`<span class="badge b-amber">${fmt(st.aJustifier)}</span>`:'<span class="badge b-green">0 DT</span>'}</td>
-      <td><span class="badge b-blue">Détail ›</span></td></tr>`;}).join('');
-    outTable=`<div class="sectitle">Espèces par utilisateur — qui détient / a payé (cliquez une ligne)</div><div class="card"><table>
-      <tr><th>Utilisateur</th><th style="text-align:right;">Reçu (avances)</th><th style="text-align:right;">Payé (année)</th><th style="text-align:right;">Reste</th><th style="text-align:right;">À justifier</th><th></th></tr>${rows}</table></div>`;
-  } else {
-    const st=userStats(state.currentUid);
-    outTable=`<div class="sectitle">Ma situation — ce que j'ai / ce qu'il me reste</div><div class="card"><table>
-      <tr><td>Reçu (avances)</td><td style="text-align:right;font-weight:700;">${fmt(st.recu)}</td></tr>
-      <tr><td>Déjà payé / justifié (année)</td><td style="text-align:right;font-weight:700;">${fmt(st.payeAnnee)}</td></tr>
-      <tr><td>Reste (espèces que je détiens)</td><td style="text-align:right;font-weight:700;">${fmt(st.reste)}</td></tr>
-      <tr><td>À justifier</td><td style="text-align:right;">${st.aJustifier>0?`<span class="badge b-amber">${fmt(st.aJustifier)}</span>`:'<span class="badge b-green">0 DT</span>'}</td></tr></table>
-      <div style="margin-top:10px;"><button class="btn sm sec" onclick="modalUserDetail('${state.currentUid}')">Voir le détail</button></div></div>`;
-  }
-  const recent=state.purchases.slice(0,6).map(p=>purchaseRow(p)).join('')||emptyRow('Aucun achat');
-  const demoBtn=`<button class="btn sm sec" onclick="modalGuide()">❓ Comment utiliser</button>`;
-  return `<h1>Tableau de bord</h1><div class="sub">Vue d'ensemble de la trésorerie · ${now().toLocaleDateString('fr-FR')}</div>
-    <div class="toolbar">${demoBtn}</div><div class="grid kpis">${kpis.join('')}</div>${fundTiles}${byWho}${outTable}
-    <div class="sectitle">Derniers achats</div>
-    <div class="card"><table><tr><th>Réf.</th><th>Description</th><th>Demandeur</th><th>Montant</th><th>Statut</th></tr>${recent}</table></div>`;
+  let usersTable='';
+  if(P){ const rows=CACHE.users.filter(u=>u.role!=='comptable').map(u=>{const b=bal('box_'+u.uid);return `<tr><td>${userName(u.uid)} <span class="muted">(${roleLabel(u.role)})</span></td><td style="text-align:right;font-weight:700;">${fmt(b)}</td></tr>`;}).join('')||emptyRow('Aucun utilisateur',2);
+    usersTable=`<div class="sectitle">Soldes par utilisateur</div><div class="card"><table><tr><th>Utilisateur</th><th style="text-align:right;">Solde</th></tr>${rows}</table></div>`; }
+  else { usersTable=`<div class="sectitle">Ma situation</div><div class="card"><table><tr><td>Mon solde</td><td style="text-align:right;font-weight:700;">${fmt(bal('box_'+ME.uid))}</td></tr></table></div>`; }
+  const list=(P?CACHE.purchases:CACHE.purchases.filter(p=>p.buyerUid===ME.uid)).slice(0,6);
+  const recent=list.map(p=>`<tr><td><b>${p.ref}</b></td><td>${p.description||''}</td><td>${userName(p.buyerUid)}</td><td style="font-weight:700;">${fmt(p.amount)}</td><td>${statusBadge(p.status)}</td></tr>`).join('')||emptyRow('Aucun achat');
+  return `<h1>Tableau de bord</h1><div class="sub">Vue d'ensemble · ${now().toLocaleDateString('fr-FR')} · temps réel</div><div class="grid kpis">${kpis.join('')}</div>${usersTable}<div class="sectitle">Derniers achats</div><div class="card"><table><tr><th>Réf.</th><th>Description</th><th>Acheteur</th><th>Montant</th><th>Statut</th></tr>${recent}</table></div>`;
 }
-
-function modalUserDetail(id){
-  const st=userStats(id);
-  const adv=state.cashOps.filter(o=>o.type==='avance'&&o.to==='acc_'+id).map(o=>`<tr><td>${dt(o.at)}</td><td>${o.note||''}</td><td style="text-align:right;font-weight:700;">${fmt(o.amount)}</td></tr>`).join('')||'<tr><td colspan="3" class="muted">Aucune avance</td></tr>';
-  const purs=state.purchases.filter(p=>p.requestedBy===id).map(p=>`<tr><td>${p.ref}</td><td>${p.description}</td><td style="text-align:right;">${fmt(p.montant)}</td><td>${statusBadge(p.status)}</td></tr>`).join('')||'<tr><td colspan="4" class="muted">Aucun achat</td></tr>';
-  openModal(`<h3>${userName(id)} — situation ${now().getFullYear()}</h3>
-    <div class="grid" style="grid-template-columns:1fr 1fr;gap:10px;">
-      ${kpi('👛','Reste (détenu)',fmt(st.reste),'var(--blue)')}${kpi('💸','Payé (année)',fmt(st.payeAnnee),'var(--green)')}
-      ${kpi('⬇️','Reçu (avances)',fmt(st.recu),'var(--navy)')}${kpi('⚠️','À justifier',fmt(st.aJustifier),'var(--amber)')}</div>
-    ${st.enAttente>0?`<div class="note warn" style="margin-top:10px;">${fmt(st.enAttente)} en attente de validation (non encore débité).</div>`:''}
-    <div class="note" style="margin-top:10px;">« À justifier » = espèces détenues non encore couvertes par un achat approuvé avec justificatifs.</div>
-    <div class="sectitle">Avances reçues</div><div class="card" style="padding:0;"><table><tr><th>Date</th><th>Note</th><th style="text-align:right;">Montant</th></tr>${adv}</table></div>
-    <div class="sectitle">Achats déclarés</div><div class="card" style="padding:0;"><table><tr><th>Réf.</th><th>Description</th><th style="text-align:right;">Montant</th><th>Statut</th></tr>${purs}</table></div>
-    <div class="actions"><button class="btn sec" onclick="closeModal()">Fermer</button></div>`);
+function viewCash(){
+  const ops=CACHE.cashops.slice(0,14).map(o=>`<tr><td>${o.type==='entree'?'⬇️ Entrée':(o.type==='avance'?'↔️ Avance → '+userName((o.to||'').replace('box_','')):'⬆️ Sortie')}</td><td>${o.category||''}</td><td>${o.note||''}</td><td style="text-align:right;font-weight:700;">${fmt(o.amount)}</td><td class="muted">${fmtTs(o.createdAt)}</td></tr>`).join('')||emptyRow('Aucun mouvement');
+  const btns=`${can('fund')?'<button class="btn" onclick="modalFund()">＋ Alimenter la caisse</button>':''}${can('advance')?'<button class="btn navy" onclick="modalAdvance()">↔ Transférer une avance</button>':''}`;
+  return `<h1>Gestion de la caisse</h1><div class="sub">Caisse générale et avances</div><div class="grid kpis"><div style="max-width:320px;">${kpi('🏦','Caisse générale',fmt(bal('general')),'var(--navy)')}</div></div><div class="toolbar" style="margin-top:14px;">${btns}</div><div class="sectitle">Mouvements récents</div><div class="card"><table><tr><th>Type</th><th>Catégorie</th><th>Note</th><th style="text-align:right;">Montant</th><th>Date</th></tr>${ops}</table></div>`;
 }
+function viewPurchases(){
+  const seeAll=can('approve')||can('reports')||can('users'); const list=seeAll?CACHE.purchases:CACHE.purchases.filter(p=>p.buyerUid===ME.uid);
+  const rows=list.map(p=>`<tr><td><b>${p.ref}</b></td><td>${p.description||''}<div class="muted">${p.supplier||''} · ${p.category||''}</div></td><td style="font-weight:700;">${fmt(p.amount)}</td><td>${statusBadge(p.status)}</td><td><button class="btn sm sec" onclick="modalPurchase('${p.id}')">Détail</button></td></tr>`).join('')||emptyRow('Aucun achat');
+  return `<h1>Achats</h1><div class="sub">Déclaration et suivi</div>${can('purchase')?'<div class="toolbar"><button class="btn" onclick="modalNewPurchase()">＋ Nouvel achat</button></div>':''}<div class="card"><table><tr><th>Réf.</th><th>Description</th><th>Montant</th><th>Statut</th><th></th></tr>${rows}</table></div>`;
+}
+function viewValidations(){
+  const pend=CACHE.purchases.filter(p=>p.status==='en_attente');
+  if(!pend.length)return `<h1>Validations</h1><div class="sub">Dépenses en attente</div><div class="card" style="text-align:center;padding:34px;"><div style="font-size:34px;">✅</div><p class="muted" style="margin-top:8px;">Aucune dépense en attente.</p></div>`;
+  const rows=pend.map(p=>{const own=p.buyerUid===ME.uid;return `<tr><td><b>${p.ref}</b></td><td>${p.description||''}<div class="muted">${userName(p.buyerUid)}</div></td><td style="font-weight:700;">${fmt(p.amount)}</td><td><button class="btn sm sec" onclick="modalPurchase('${p.id}')">Voir</button> ${own?'<span class="muted">Votre demande</span>':`<button class="btn sm green" onclick="modalApprove('${p.id}')">Approuver</button> <button class="btn sm red" onclick="modalReject('${p.id}')">Refuser</button>`}</td></tr>`;}).join('');
+  return `<h1>Validations</h1><div class="sub">${pend.length} en attente</div><div class="note warn">On ne valide pas son propre achat. À l'approbation : IP, appareil, téléphone, localisation et signature sont enregistrés.</div><div class="card"><table><tr><th>Réf.</th><th>Description</th><th>Montant</th><th>Action</th></tr>${rows}</table></div>`;
+}
+function viewReports(){
+  const appr=CACHE.purchases.filter(p=>p.status==='approuve'); const total=appr.reduce((s,p)=>s+p.amount,0);
+  const byCat={}; appr.forEach(p=>byCat[p.category||'divers']=(byCat[p.category||'divers']||0)+p.amount);
+  const catRows=Object.entries(byCat).map(([c,v])=>`<tr><td>${c}</td><td style="text-align:right;font-weight:700;">${fmt(v)}</td></tr>`).join('')||emptyRow('—',2);
+  return `<h1>Rapports</h1><div class="sub">Synthèse des dépenses approuvées</div><div class="toolbar"><button class="btn sec" onclick="exportCSV()">📊 Export CSV (Excel)</button><button class="btn sec" onclick="window.print()">📄 Imprimer / PDF</button></div><div class="grid kpis"><div style="max-width:320px;">${kpi('💸','Total approuvé',fmt(total),'var(--green)')}</div></div><div class="sectitle">Dépenses par catégorie</div><div class="card"><table><tr><th>Catégorie</th><th style="text-align:right;">Montant</th></tr>${catRows}</table></div>`;
+}
+function viewUsers(){
+  const rows=CACHE.users.map(u=>`<tr><td>${userName(u.uid)}<div class="muted">${u.email||''}</div></td><td><span class="badge b-navy" style="background:#dfe6f1;color:var(--navy);">${roleLabel(u.role)}</span></td><td><span class="badge ${u.actif!==false?'b-green':'b-grey'}">${u.actif!==false?'Actif':'Inactif'}</span></td><td>${u.role!=='comptable'?fmt(bal('box_'+u.uid)):'—'}</td><td>${u.uid&&u.uid!==ME.uid?`<button class="btn sm sec" onclick="toggleActive('${u.id}',${u.actif!==false})">${u.actif!==false?'Désactiver':'Activer'}</button>`:''}</td></tr>`).join('');
+  return `<h1>Utilisateurs &amp; permissions</h1><div class="sub">L'admin autorise un compte par son adresse Gmail. La personne se connecte ensuite avec Google.</div><div class="toolbar"><button class="btn" onclick="modalNewUser()">＋ Autoriser un compte</button></div><div class="card" style="overflow:auto;"><table><tr><th>Nom / Email</th><th>Rôle</th><th>Statut</th><th>Solde</th><th></th></tr>${rows}</table></div>`;
+}
+function viewAudit(){
+  const rows=CACHE.audit.slice(0,60).map(a=>`<tr><td class="muted">${fmtTs(a.createdAt)}</td><td>${a.userName||userName(a.userUid)}</td><td><span class="badge b-blue">${a.action}</span></td><td>${a.entityId||''}</td><td>${a.amount?fmt(a.amount):''}</td></tr>`).join('')||emptyRow('Aucune action');
+  return `<h1>Journal d'audit</h1><div class="sub">Traçabilité de toutes les actions</div><div class="card" style="overflow:auto;"><table><tr><th>Date</th><th>Utilisateur</th><th>Action</th><th>Objet</th><th>Montant</th></tr>${rows}</table></div>`;
+}
+function viewProfile(){
+  return `<h1>Profil</h1><div class="sub">${userName(ME.uid)} · ${roleLabel(ME.role)}</div><div class="card" style="max-width:520px;"><p style="margin-bottom:8px;"><b>Email :</b> ${ME.email}</p><p style="margin-bottom:8px;"><b>Rôle :</b> ${roleLabel(ME.role)}</p><div class="field"><label>Téléphone (pour la traçabilité des approbations)</label><input id="profPhone" value="${ME.phone||''}" placeholder="ex. 60 123 456"></div><div class="field"><label>Appareil</label><input id="profDevice" value="${ME.device||''}" placeholder="ex. Infinix Note 30"></div><button class="btn" onclick="saveProfile()">Enregistrer</button></div>`;
+}
+async function saveProfile(){ const phone=document.getElementById('profPhone').value.trim(); const device=document.getElementById('profDevice').value.trim(); await db.collection('users').doc(ME.uid).set({phone,device},{merge:true}); ME.phone=phone;ME.device=device; toast('Profil enregistré.'); }
+async function toggleActive(id,cur){ await db.collection('users').doc(id).set({actif:!cur},{merge:true}); toast('Statut mis à jour.'); }
 
-function viewCash(){const ops=state.cashOps.slice(0,14).map(o=>{const ic=o.type==='entree'?'⬇️':(o.type==='avance'?'↔️':'⬆️');const lbl=o.type==='avance'?'Avance → '+userName((o.to||'').replace('acc_','')):(o.type==='entree'?'Entrée':'Sortie');return `<tr><td>${ic} ${lbl}</td><td>${o.category}</td><td>${o.note||''}</td><td style="text-align:right;font-weight:700;">${fmt(o.amount)}</td><td class="muted">${dt(o.at)}</td></tr>`;}).join('')||emptyRow('Aucun mouvement');const btns=`${can('fund')?'<button class="btn" onclick="modalFund()">＋ Alimenter la caisse</button>':''}${can('advance')?'<button class="btn navy" onclick="modalAdvance()">↔ Transférer une avance</button>':''}`;return `<h1>Gestion de la caisse</h1><div class="sub">Caisse générale et avances</div><div class="grid kpis"><div style="max-width:320px;">${kpi('🏦','Caisse générale',fmt(acc('general').balance),'var(--navy)')}</div></div><div class="toolbar" style="margin-top:14px;">${btns}</div><div class="sectitle">Mouvements récents</div><div class="card"><table><tr><th>Type</th><th>Catégorie</th><th>Note</th><th style="text-align:right;">Montant</th><th>Date</th></tr>${ops}</table></div>`;}
+// ---------------- NOTIFICATIONS ----------------
+function renderBell(){const b=document.getElementById('bell');if(!b||!ME)return;b.style.display=can('approve')?'inline-flex':'none';const c=CACHE.notifs.filter(n=>!n.read).length;const d=b.querySelector('.dot');d.textContent=c;d.style.display=c>0?'flex':'none';}
+function openNotifs(){const list=CACHE.notifs.map(n=>`<div class="filebox ${n.read?'':'ok'}" style="cursor:pointer" onclick="readNotif('${n.id}')"><span>🔔</span><div style="flex:1"><b>${n.title}</b><div class="muted">${n.body||''} · ${fmtTs(n.createdAt)}</div></div>${n.read?'':'<span class="badge b-red">nouveau</span>'}</div>`).join('')||'<p class="muted">Aucune notification</p>';openModal(`<h3>Notifications</h3>${list}<div class="actions"><button class="btn sec" onclick="closeModal()">Fermer</button></div>`);}
+function readNotif(id){db.collection('notifications').doc(id).set({read:true},{merge:true});closeModal();go('validations');}
 
-function viewPurchases(){const seeAll=can('approve')||can('reports')||can('users');let list=seeAll?state.purchases:state.purchases.filter(p=>p.requestedBy===state.currentUid);const rows=list.map(p=>`<tr><td><b>${p.ref}</b></td><td>${p.description}<div class="muted">${p.fournisseur} · ${p.categorie} · ${p.mode==='credit'?'<span class="badge b-amber">Crédit fournisseur</span>':'Espèces'}</div></td><td style="font-weight:700;">${fmt(p.montant)}</td><td>${statusBadge(p.status)}${p.approverType?`<div class="muted">par ${p.approverType}</div>`:''}</td><td><button class="btn sm sec" onclick="modalPurchase('${p.id}')">Détail</button></td></tr>`).join('')||emptyRow('Aucun achat');return `<h1>Achats</h1><div class="sub">Déclaration et suivi des achats</div>${can('purchase')?`<div class="toolbar"><button class="btn" onclick="modalNewPurchase()">＋ Nouvel achat</button></div>`:''}<div class="card"><table><tr><th>Réf.</th><th>Description</th><th>Montant</th><th>Statut</th><th></th></tr>${rows}</table></div>`;}
-
-function viewValidations(){const pending=state.purchases.filter(p=>p.status==='enAttente');if(!pending.length)return `<h1>Validations</h1><div class="sub">Dépenses en attente</div><div class="card" style="text-align:center;padding:34px;"><div style="font-size:34px;">✅</div><p class="muted" style="margin-top:8px;">Aucune dépense en attente.</p></div>`;const rows=pending.map(p=>{const own=p.requestedBy===state.currentUid;return `<tr><td><b>${p.ref}</b></td><td>${p.description}<div class="muted">${userName(p.requestedBy)} · ${p.docs?Object.keys(p.docs).length+' justificatifs':''}</div></td><td style="font-weight:700;">${fmt(p.montant)}</td><td><button class="btn sm sec" onclick="modalPurchase('${p.id}')">Voir pièces</button> ${own?'<span class="muted">Votre demande</span>':`<button class="btn sm green" onclick="modalApprove('${p.id}')">Approuver</button> <button class="btn sm red" onclick="modalReject('${p.id}')">Rejeter</button>`}</td></tr>`;}).join('');return `<h1>Validations</h1><div class="sub">${pending.length} dépense(s) en attente</div><div class="note warn">Un gérant ne peut pas approuver une dépense qu'il a lui-même déclarée (séparation des tâches). L'approbateur (Gérant administratif ou Associé) est enregistré.</div><div class="card"><table><tr><th>Réf.</th><th>Description</th><th>Montant</th><th>Action</th></tr>${rows}</table></div>`;}
-
-function viewReports(){const appr=state.purchases.filter(p=>p.status==='approuve');const cash=appr.filter(p=>p.mode!=='credit');const cred=appr.filter(p=>p.mode==='credit');const total=cash.reduce((s,p)=>s+p.montant,0);const totalCred=cred.reduce((s,p)=>s+p.montant,0);const byCat={};appr.forEach(p=>byCat[p.categorie]=(byCat[p.categorie]||0)+p.montant);const catRows=Object.entries(byCat).map(([c,v])=>`<tr><td>${c}</td><td style="text-align:right;font-weight:700;">${fmt(v)}</td></tr>`).join('')||emptyRow('—');return `<h1>Rapports</h1><div class="sub">Synthèse des dépenses approuvées</div><div class="toolbar"><button class="btn sec" onclick="toast('Démo : la version Flutter génère un PDF réel.')">📄 Export PDF</button><button class="btn sec" onclick="toast('Démo : la version Flutter génère un Excel réel.')">📊 Export Excel</button></div><div class="grid kpis">${kpi('💸','Décaissé (espèces)',fmt(total),'var(--green)')}${kpi('🧾','Crédit fournisseur (dû)',fmt(totalCred),'var(--amber)')}</div><div class="sectitle">Dépenses par catégorie</div><div class="card"><table><tr><th>Catégorie</th><th style="text-align:right;">Montant</th></tr>${catRows}</table></div>`;}
-
-function viewUsers(){const rows=state.users.map(u=>{const chips=u.perms.map(pk=>`<span class="badge b-blue">${ALLPERMS[pk]?ALLPERMS[pk].split(' ')[0]:pk}</span>`).join(' ');return `<tr><td>${userName(u.uid)}</td><td>${u.fonction}</td><td><span class="badge b-navy">${approverLabel(u)}</span></td><td><span class="badge ${u.actif?'b-green':'b-grey'}">${u.actif?'Actif':'Inactif'}</span></td><td style="max-width:230px;">${chips}</td></tr>`;}).join('');return `<h1>Utilisateurs & permissions</h1><div class="sub">Chaque compte a ses options (aucune suppression — statut actif/inactif)</div><div class="toolbar"><button class="btn" onclick="modalNewUser()">＋ Créer un compte</button></div><div class="card" style="overflow:auto;"><table><tr><th>Nom</th><th>Fonction</th><th>Type</th><th>Statut</th><th>Options / permissions</th></tr>${rows}</table></div>`;}
-
-function viewAudit(){const rows=state.audit.slice(0,50).map(a=>`<tr><td class="muted">${dt(a.at)}</td><td>${userName(a.userUid)}</td><td><span class="badge b-blue">${a.action}</span></td><td>${a.entityId}</td><td>${a.amount?fmt(a.amount):''}</td><td class="muted">${a.ip}</td></tr>`).join('')||emptyRow('Aucune action');return `<h1>Journal d'audit</h1><div class="sub">Traçabilité inviolable de toutes les actions</div><div class="card" style="overflow:auto;"><table><tr><th>Date/heure</th><th>Utilisateur</th><th>Action</th><th>Objet</th><th>Montant</th><th>IP</th></tr>${rows}</table></div>`;}
-
-function viewProfile(){const u=me();const chips=u.perms.map(pk=>`<span class="badge b-blue">${ALLPERMS[pk]||pk}</span>`).join(' ');return `<h1>Profil</h1><div class="sub">${userName(u.uid)} · ${approverLabel(u)}</div><div class="card" style="max-width:560px;"><p style="margin-bottom:8px;"><b>Fonction :</b> ${u.fonction}</p><p style="margin-bottom:8px;"><b>Type :</b> ${approverLabel(u)}</p><p style="margin-bottom:8px;"><b>Mes options :</b><br>${chips}</p><p style="margin:10px 0;"><b>Signature :</b> <span class="muted">${u.signature?'Enregistrée':'Non enregistrée'}</span></p>${u.signature?`<img src="${u.signature}" style="border:1px solid var(--line);border-radius:8px;max-width:240px;background:#fff;">`:''}<div style="margin-top:14px;"><button class="btn sec" onclick="modalSignature(s=>{me().signature=s;render();toast('Signature enregistrée.');})">✍ Enregistrer ma signature</button></div></div>`;}
-
+// ---------------- MODALES ----------------
 const modalBg=document.getElementById('modalBg'),modalEl=document.getElementById('modal');
 function openModal(h){modalEl.innerHTML=h;modalBg.classList.add('show');}
 function closeModal(){modalBg.classList.remove('show');}
 modalBg.addEventListener('click',e=>{if(e.target===modalBg)closeModal();});
 
-function modalFund(){const c={banque:'Banque',associe:'Associé',paiement_client:'Paiement client',apport_personnel:'Apport personnel'};openModal(`<h3>Alimenter la caisse générale</h3><div class="field"><label>Montant (DT)</label><input id="fAmt" type="number" placeholder="ex. 10000"></div><div class="field"><label>Source</label><select id="fCat">${Object.entries(c).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div><div class="field"><label>Note</label><input id="fNote" placeholder="optionnel"></div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn" onclick="submitFund()">Valider</button></div>`);}
-function submitFund(){const a=parseDT(document.getElementById('fAmt').value);if(a<=0)return;fundCash(a,document.getElementById('fCat').value,document.getElementById('fNote').value);closeModal();render();toast('Caisse alimentée : '+fmt(a));}
-function modalAdvance(){const resp=state.users.filter(u=>u.role==='responsable'&&u.actif);openModal(`<h3>Transférer une avance</h3><div class="field"><label>Bénéficiaire</label><select id="aTo">${resp.map(u=>`<option value="${u.uid}">${userName(u.uid)}</option>`).join('')}</select></div><div class="field"><label>Montant (DT)</label><input id="aAmt" type="number" placeholder="ex. 5000"></div><div class="field"><label>Note</label><input id="aNote" placeholder="optionnel"></div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn navy" onclick="submitAdvance()">Transférer</button></div>`);}
-function submitAdvance(){const a=parseDT(document.getElementById('aAmt').value);const to=document.getElementById('aTo').value;if(a<=0)return;if(transferAdvance(to,a,document.getElementById('aNote').value)){closeModal();render();toast('Avance transférée : '+fmt(a));}}
+function modalFund(){const c={vente:'Vente',apport:'Apport',alimentation:'Alimentation'};openModal(`<h3>Alimenter la caisse générale</h3><div class="field"><label>Montant (DT)</label><input id="fAmt" type="number" placeholder="ex. 10000"></div><div class="field"><label>Source</label><select id="fCat">${Object.entries(c).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div><div class="field"><label>Note</label><input id="fNote"></div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn" onclick="submitFund(this)">Valider</button></div>`);}
+async function submitFund(btn){const a=parseDT(document.getElementById('fAmt').value);if(a<=0)return;btn.disabled=true;try{await fundCash(a,document.getElementById('fCat').value,document.getElementById('fNote').value);closeModal();toast('Caisse alimentée : '+fmt(a));}catch(e){toast('Erreur : '+e.message);btn.disabled=false;}}
+function modalAdvance(){const resp=CACHE.users.filter(u=>u.role==='acheteur'||u.perms&&u.perms.includes('purchase'));openModal(`<h3>Transférer une avance</h3><div class="field"><label>Bénéficiaire</label><select id="aTo">${resp.map(u=>`<option value="${u.uid}">${userName(u.uid)}</option>`).join('')||'<option value="">— aucun acheteur —</option>'}</select></div><div class="field"><label>Montant (DT)</label><input id="aAmt" type="number" placeholder="ex. 5000"></div><div class="field"><label>Note</label><input id="aNote"></div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn navy" onclick="submitAdvance(this)">Transférer</button></div>`);}
+async function submitAdvance(btn){const a=parseDT(document.getElementById('aAmt').value);const to=document.getElementById('aTo').value;if(a<=0||!to){toast('Renseignez bénéficiaire et montant.');return;}btn.disabled=true;try{await transferAdvance(to,a,document.getElementById('aNote').value);closeModal();toast('Avance transférée : '+fmt(a));}catch(e){toast('Erreur : '+e.message);btn.disabled=false;}}
 
-let pendingDocs={};
-function modalNewPurchase(){pendingDocs={};const c={fournisseur:'Fournisseur',depense_chantier:'Dépense chantier',avance_utilisateur:'Matériel'};openModal(`<h3>Déclarer un achat</h3><div class="field"><label>Fournisseur</label><input id="pFour" placeholder="ex. Métal Pro"></div><div class="field"><label>Montant (DT)</label><input id="pAmt" type="number" placeholder="ex. 1300"></div><div class="field"><label>Catégorie</label><select id="pCat">${Object.entries(c).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div><div class="field"><label>Description</label><input id="pDesc" placeholder="ex. Achat matériel ascenseur"></div><div class="field"><label>Mode de paiement</label><select id="pMode"><option value="especes">Espèces (décaissement immédiat)</option><option value="credit">Crédit fournisseur (payé plus tard)</option></select></div><label style="font-size:12px;color:var(--muted);font-weight:600;">Justificatifs (PDF / JPEG) — Bon de livraison obligatoire · Facture/reçu pour paiement espèces · Photo optionnelle (scan auto)</label>${docInput('bl','Bon de livraison (obligatoire)')}${docInput('facture','Facture / reçu (paiement)')}${docInput('photo','Photo (optionnelle)')}<div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn" onclick="submitPurchase()">Soumettre</button></div>`);}
-function docInput(k,l){return `<div class="filebox" id="fb_${k}"><span>📎</span><div style="flex:1">${l}<div class="muted" id="fn_${k}">Aucun fichier</div></div><label class="btn sm sec" style="margin:0;">Choisir<input type="file" accept="application/pdf,image/jpeg" style="display:none" onchange="pickDoc('${k}',this)"></label></div>`;}
-function markDoc(k,label){document.getElementById('fn_'+k).textContent=label;document.getElementById('fb_'+k).classList.add('ok');}
-function scanImage(file,cb){const fr=new FileReader();fr.onload=e=>{const img=new Image();img.onload=()=>{const max=1280;let w=img.width,h=img.height;if(w>max){h=Math.round(h*max/w);w=max;}const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.filter='grayscale(0.25) contrast(1.3) brightness(1.06)';x.drawImage(img,0,0,w,h);cb(c.toDataURL('image/jpeg',0.85));};img.src=e.target.result;};fr.readAsDataURL(file);}
-function pickDoc(k,input){const f=input.files[0];if(!f)return;if(!(f.type==='application/pdf'||f.type==='image/jpeg')){toast('Seuls PDF et JPEG sont acceptés.');return;}if(f.type==='image/jpeg'){scanImage(f,(durl)=>{pendingDocs[k]={name:f.name,url:durl,mime:'image/jpeg',scanned:true};markDoc(k,f.name+' · scanné ✓');});}else{const url=URL.createObjectURL(f);pendingDocs[k]={name:f.name,url,mime:f.type};markDoc(k,f.name);}}
-function submitPurchase(){const montant=parseDT(document.getElementById('pAmt').value);const fournisseur=document.getElementById('pFour').value.trim();const description=document.getElementById('pDesc').value.trim();const categorie=document.getElementById('pCat').value;const mode=document.getElementById('pMode').value;if(montant<=0||!fournisseur||!description){toast('Renseignez fournisseur, montant et description.');return;}if(!pendingDocs.bl){toast('Le bon de livraison est obligatoire.');return;}if(mode==='especes'&&!pendingDocs.facture){toast('Achat espèces : la facture ou le reçu est obligatoire (la photo reste optionnelle).');return;}createPurchase({fournisseur,montant,categorie,description,mode,docs:{...pendingDocs}});closeModal();render();beep();toast(mode==='credit'?'Achat à crédit fournisseur déclaré · en attente d\'approbation.':'Achat déclaré · notification envoyée aux gérants pour approbation.');}
-function docRow(k,d){const label=({facture:'Facture / reçu',photo:'Photo',bl:'Bon de livraison'})[k]||k;const name=(typeof d==='string')?d:d.name;const url=(typeof d==='object')?d.url:null;const icon=(name||'').toLowerCase().endsWith('.pdf')?'📄':'🖼️';const view=url?`<button class="btn sm sec" onclick="window.open('${url}','_blank')">👁 Voir</button>`:'<span class="muted">(exemple démo)</span>';return `<div class="filebox ok"><span>${icon}</span><div style="flex:1">${label}<div class="muted">${name}</div></div>${view}</div>`;}
-function modalPurchase(id){const p=state.purchases.find(x=>x.id===id);const docs=p.docs?Object.entries(p.docs).map(([k,d])=>docRow(k,d)).join(''):'<p class="muted">—</p>';const canApr=can('approve')&&p.status==='enAttente'&&p.requestedBy!==state.currentUid;openModal(`<h3>${p.ref}</h3><p><b>Description :</b> ${p.description}</p><p><b>Fournisseur :</b> ${p.fournisseur}</p><p><b>Montant :</b> ${fmt(p.montant)}</p><p><b>Mode :</b> ${p.mode==='credit'?'<span class="badge b-amber">Crédit fournisseur</span> (payé plus tard)':'Espèces (décaissement immédiat)'}</p><p><b>Demandeur :</b> ${userName(p.requestedBy)}</p><p><b>Statut :</b> ${statusBadge(p.status)}</p>${p.approverType?`<p><b>Approuvé par :</b> ${userName(p.approvedBy)} — ${p.approverType}</p>`:''}${p.reason?`<p><b>Motif rejet :</b> ${p.reason}</p>`:''}${p.signature?`<p style="margin-top:8px;"><b>Signature :</b></p><img src="${p.signature}" style="max-width:200px;border:1px solid var(--line);border-radius:8px;background:#fff;">`:''}<div class="sectitle" style="margin-top:14px;">Justificatifs</div>${docs}<div class="actions">${canApr?`<button class="btn green" onclick="closeModal();modalApprove('${p.id}')">Approuver & signer</button><button class="btn red" onclick="closeModal();modalReject('${p.id}')">Rejeter</button>`:''}${p.status==='approuve'?`<button class="btn navy" onclick="genVoucher('${p.id}')">📄 Bon de paiement</button>`:''}<button class="btn sec" onclick="closeModal()">Fermer</button></div>`);}
-function modalReject(id){openModal(`<h3>Rejeter l'achat</h3><div class="field"><label>Motif</label><textarea id="rReason" rows="3"></textarea></div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn red" onclick="(function(){var r=document.getElementById('rReason').value;if(!r){toast('Indiquez un motif.');return;}closeModal();rejectPurchase('${id}',r);})()">Rejeter</button></div>`);}
-function modalApprove(id){const p=state.purchases.find(x=>x.id===id);modalSignature(s=>{approvePurchase(id,s);},'Signature d\'approbation — '+p.ref);}
+let pendingPhoto=null;
+function modalNewPurchase(){pendingPhoto=null;const c={achat:'Achat',carburant:'Carburant',fournisseur:'Fournisseur',maintenance:'Maintenance',divers:'Divers'};openModal(`<h3>Déclarer un achat</h3><div class="field"><label>Fournisseur</label><input id="pSup" placeholder="ex. Métal Pro"></div><div class="field"><label>Montant (DT)</label><input id="pAmt" type="number" placeholder="ex. 1300"></div><div class="field"><label>Catégorie</label><select id="pCat">${Object.entries(c).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div><div class="field"><label>Description</label><input id="pDesc" placeholder="ex. Achat matériel"></div><label style="font-size:12px;color:var(--muted);font-weight:600;">Photo de facture (obligatoire) — PDF/JPG, scan auto</label><div class="filebox" id="fbPhoto"><span>📎</span><div style="flex:1">Facture / photo<div class="muted" id="fnPhoto">Aucun fichier</div></div><label class="btn sm sec" style="margin:0;">Choisir<input type="file" accept="image/jpeg,image/png,application/pdf" style="display:none" onchange="pickPhoto(this)"></label></div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn" onclick="submitPurchase(this)">Soumettre</button></div>`);}
+function pickPhoto(input){const f=input.files[0];if(!f)return;if(f.type==='application/pdf'){pendingPhoto={name:f.name,type:'pdf',data:null};document.getElementById('fnPhoto').textContent=f.name+' (PDF)';document.getElementById('fbPhoto').classList.add('ok');return;}const fr=new FileReader();fr.onload=e=>{const img=new Image();img.onload=()=>{const max=1000;let w=img.width,h=img.height;if(w>max){h=Math.round(h*max/w);w=max;}const cv=document.createElement('canvas');cv.width=w;cv.height=h;const x=cv.getContext('2d');x.filter='grayscale(0.2) contrast(1.25) brightness(1.05)';x.drawImage(img,0,0,w,h);pendingPhoto={name:f.name,type:'image',data:cv.toDataURL('image/jpeg',0.7)};document.getElementById('fnPhoto').textContent=f.name+' · scanné ✓';document.getElementById('fbPhoto').classList.add('ok');};img.src=e.target.result;};fr.readAsDataURL(f);}
+async function submitPurchase(btn){const amount=parseDT(document.getElementById('pAmt').value);const supplier=document.getElementById('pSup').value.trim();const description=document.getElementById('pDesc').value.trim();const category=document.getElementById('pCat').value;if(amount<=0||!description){toast('Renseignez montant et description.');return;}if(!pendingPhoto){toast('La photo de facture est obligatoire.');return;}btn.disabled=true;try{await createPurchase({amount,supplier,description,category,invoiceName:pendingPhoto.name,invoiceType:pendingPhoto.type,invoiceData:pendingPhoto.data||null});closeModal();toast('Achat déclaré · les responsables sont notifiés.');}catch(e){toast('Erreur : '+e.message);btn.disabled=false;}}
+function modalPurchase(id){const p=CACHE.purchases.find(x=>x.id===id);if(!p)return;const canApr=can('approve')&&p.status==='en_attente'&&p.buyerUid!==ME.uid;const img=p.invoiceData?`<img src="${p.invoiceData}" style="max-width:100%;border:1px solid var(--line);border-radius:10px;margin-top:8px;">`:(p.invoiceName?`<div class="filebox ok"><span>📄</span><div>${p.invoiceName}</div></div>`:'<p class="muted">Aucune pièce</p>');openModal(`<h3>${p.ref}</h3><p><b>Description :</b> ${p.description||''}</p><p><b>Fournisseur :</b> ${p.supplier||''}</p><p><b>Montant :</b> ${fmt(p.amount)}</p><p><b>Acheteur :</b> ${userName(p.buyerUid)}</p><p><b>Statut :</b> ${statusBadge(p.status)}</p>${p.approverName?`<p><b>Décidé par :</b> ${p.approverName}</p>`:''}${p.motif?`<p><b>Motif :</b> ${p.motif}</p>`:''}${p.ip?`<p class="muted">IP ${p.ip} · ${p.deviceInfo||''} · tél ${p.phone||'—'} ${p.geo?('· GPS '+p.geo.lat+','+p.geo.lng):''}</p>`:''}<div class="sectitle">Facture</div>${img}${p.signature?`<div class="sectitle">Signature</div><img src="${p.signature}" style="max-width:200px;border:1px solid var(--line);border-radius:8px;">`:''}<div class="actions">${canApr?`<button class="btn green" onclick="closeModal();modalApprove('${p.id}')">Approuver &amp; signer</button><button class="btn red" onclick="closeModal();modalReject('${p.id}')">Refuser</button>`:''}<button class="btn sec" onclick="closeModal()">Fermer</button></div>`);}
 
-let sigCtx,sigDrawing=false,sigHas=false,sigCanvas;
-function modalSignature(onConfirm,title){openModal(`<h3>${title||'Signature électronique'}</h3><p class="muted" style="margin-bottom:8px;">Signez ci-dessous (souris ou doigt)</p><canvas id="sig" class="sigpad" height="180"></canvas><div style="text-align:right;margin-top:6px;"><button class="btn sm sec" onclick="clearSig()">Effacer</button></div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn green" id="sigConfirm">Confirmer la signature</button></div>`);setupSig(onConfirm);}
-function setupSig(onConfirm){sigCanvas=document.getElementById('sig');sigCanvas.width=sigCanvas.offsetWidth;sigCtx=sigCanvas.getContext('2d');sigCtx.fillStyle='#F4F6F9';sigCtx.fillRect(0,0,sigCanvas.width,sigCanvas.height);sigCtx.strokeStyle='#16243F';sigCtx.lineWidth=2.4;sigCtx.lineCap='round';sigCtx.lineJoin='round';sigHas=false;const pos=e=>{const r=sigCanvas.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return {x:t.clientX-r.left,y:t.clientY-r.top};};const start=e=>{sigDrawing=true;const p=pos(e);sigCtx.beginPath();sigCtx.moveTo(p.x,p.y);e.preventDefault();};const move=e=>{if(!sigDrawing)return;const p=pos(e);sigCtx.lineTo(p.x,p.y);sigCtx.stroke();sigHas=true;e.preventDefault();};const end=()=>{sigDrawing=false;};sigCanvas.onmousedown=start;sigCanvas.onmousemove=move;window.onmouseup=end;sigCanvas.ontouchstart=start;sigCanvas.ontouchmove=move;sigCanvas.ontouchend=end;document.getElementById('sigConfirm').onclick=()=>{if(!sigHas){toast('Veuillez signer.');return;}const data=sigCanvas.toDataURL('image/png');closeModal();onConfirm(data);};}
-function clearSig(){sigCtx.fillStyle='#F4F6F9';sigCtx.fillRect(0,0,sigCanvas.width,sigCanvas.height);sigHas=false;}
+let sigCtx,sigDraw=false,sigHas=false,sigCv;
+function modalApprove(id){openModal(`<h3>Approuver &amp; signer</h3><p class="muted" style="margin-bottom:6px;">Signez ci-dessous. IP, appareil, téléphone et localisation seront enregistrés.</p><canvas id="sig" class="sigpad" height="170"></canvas><div style="text-align:right;margin-top:6px;"><button class="btn sm sec" onclick="clearSig()">Effacer</button></div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn green" id="sigOk" onclick="submitApprove('${id}',this)">Confirmer l'approbation</button></div>`);setupSig();}
+function setupSig(){sigCv=document.getElementById('sig');sigCv.width=sigCv.offsetWidth;sigCtx=sigCv.getContext('2d');sigCtx.fillStyle='#F4F6F9';sigCtx.fillRect(0,0,sigCv.width,sigCv.height);sigCtx.strokeStyle='#0E2A47';sigCtx.lineWidth=2.4;sigCtx.lineCap='round';sigHas=false;const pos=e=>{const r=sigCv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top};};const st=e=>{sigDraw=true;const p=pos(e);sigCtx.beginPath();sigCtx.moveTo(p.x,p.y);e.preventDefault();};const mv=e=>{if(!sigDraw)return;const p=pos(e);sigCtx.lineTo(p.x,p.y);sigCtx.stroke();sigHas=true;e.preventDefault();};const en=()=>sigDraw=false;sigCv.onmousedown=st;sigCv.onmousemove=mv;window.onmouseup=en;sigCv.ontouchstart=st;sigCv.ontouchmove=mv;sigCv.ontouchend=en;}
+function clearSig(){sigCtx.fillStyle='#F4F6F9';sigCtx.fillRect(0,0,sigCv.width,sigCv.height);sigHas=false;}
+async function submitApprove(id,btn){if(!sigHas){toast('Veuillez signer.');return;}btn.disabled=true;btn.textContent='Enregistrement…';const sig=sigCv.toDataURL('image/png');const ip=await getIP();const geo=await getGeo();try{await decidePurchase(id,'approuve',{signature:sig,ip,geo,deviceInfo:(ME.device||navigator.platform||'').slice(0,60),phone:ME.phone||null});closeModal();toast('Achat approuvé et signé.');}catch(e){toast('Erreur : '+e.message);btn.disabled=false;btn.textContent='Confirmer l\'approbation';}}
+function modalReject(id){openModal(`<h3>Refuser l'achat</h3><div class="field"><label>Motif</label><textarea id="rMot" rows="3"></textarea></div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn red" onclick="submitReject('${id}',this)">Refuser</button></div>`);}
+async function submitReject(id,btn){const m=document.getElementById('rMot').value.trim();if(!m){toast('Indiquez un motif.');return;}btn.disabled=true;const ip=await getIP();try{await decidePurchase(id,'refuse',{motif:m,ip,deviceInfo:(ME.device||navigator.platform||'').slice(0,60),phone:ME.phone||null});closeModal();toast('Achat refusé.');}catch(e){toast('Erreur : '+e.message);btn.disabled=false;}}
 
-function modalNewUser(){const opts=Object.entries(ALLPERMS).map(([k,v])=>`<label class="ck"><input type="checkbox" class="permck" value="${k}" ${(k==='dashboard'||k==='purchase')?'checked':''}> ${v}</label>`).join('');openModal(`<h3>Créer un compte</h3><div class="field"><label>Prénom</label><input id="uPre"></div><div class="field"><label>Nom</label><input id="uNom"></div><div class="field"><label>Fonction</label><input id="uFon" placeholder="ex. Responsable chantier"></div><div class="field"><label>Email (identifiant de connexion)</label><input id="uEmail" placeholder="ex. helmi@spe.tn"></div><div class="field"><label>Mot de passe initial</label><input id="uPwd" value="spe1234"></div><div class="field"><label>Type</label><select id="uRole" onchange="presetPerms(this.value)"><option value="responsable:Responsable">Responsable</option><option value="manager:Gérant administratif">Gérant administratif</option><option value="manager:Associé">Associé</option><option value="comptable:Comptable">Comptable</option></select></div><label style="font-size:12px;color:var(--muted);font-weight:600;">Options / permissions du compte (cochez)</label><div style="margin:6px 0 2px;">${opts}</div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn" onclick="submitUser()">Créer le compte</button></div>`);}
-function presetPerms(sel){const role=sel.split(':')[0];const dp=defaultPerms(role);document.querySelectorAll('.permck').forEach(c=>{c.checked=dp.includes(c.value);});}
-function submitUser(){const pre=document.getElementById('uPre').value.trim();if(!pre){toast('Prénom requis.');return;}const id='u_'+uid();const sel=document.getElementById('uRole').value;const role=sel.split(':')[0];const subtype=sel.split(':')[1]||ROLES[role];const perms=Array.from(document.querySelectorAll('.permck:checked')).map(c=>c.value);if(perms.length===0)perms.push('dashboard');const email=(document.getElementById('uEmail').value||'').trim();const pwd=(document.getElementById('uPwd').value||'spe1234').trim();state.users.push({uid:id,prenom:pre,nom:document.getElementById('uNom').value.trim(),role,subtype,fonction:document.getElementById('uFon').value.trim()||subtype,actif:true,email,password:pwd,perms});if(role!=='comptable')state.accounts['acc_'+id]={balance:0};audit('CREER_UTILISATEUR','user',id);closeModal();render();toast('Compte créé. Connexion : '+(email||'(sans email)')+' / '+pwd);}
+function modalNewUser(){const opts=Object.entries(ALLPERMS).map(([k,v])=>`<label class="ck"><input type="checkbox" class="pck" value="${k}" ${k==='dashboard'?'checked':''}> ${v}</label>`).join('');openModal(`<h3>Autoriser un compte</h3><div class="field"><label>Adresse Gmail (identifiant de connexion)</label><input id="uEmail" placeholder="ex. helmi@gmail.com"></div><div class="field"><label>Prénom</label><input id="uPre"></div><div class="field"><label>Nom</label><input id="uNom"></div><div class="field"><label>Rôle</label><select id="uRole" onchange="presetPerms(this.value)"><option value="acheteur">Acheteur</option><option value="caissier">Caissier</option><option value="responsable">Responsable</option><option value="comptable">Comptable</option><option value="admin">Administrateur</option></select></div><label style="font-size:12px;color:var(--muted);font-weight:600;">Permissions</label><div style="margin:6px 0;">${opts}</div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn" onclick="submitUser(this)">Autoriser</button></div>`);presetPerms('acheteur');}
+function presetPerms(role){const dp=defaultPerms(role);document.querySelectorAll('.pck').forEach(c=>c.checked=dp.includes(c.value));}
+async function submitUser(btn){const email=document.getElementById('uEmail').value.trim().toLowerCase();const pre=document.getElementById('uPre').value.trim();if(!email||!email.includes('@')){toast('Adresse Gmail valide requise.');return;}const role=document.getElementById('uRole').value;const perms=Array.from(document.querySelectorAll('.pck:checked')).map(c=>c.value);if(!perms.includes('dashboard'))perms.push('dashboard');btn.disabled=true;try{await db.collection('users').add({email,prenom:pre,nom:document.getElementById('uNom').value.trim(),role,perms,actif:true,uid:null,createdAt:firebase.firestore.FieldValue.serverTimestamp()});audit('AUTORISER_COMPTE','user',email);closeModal();toast('Compte autorisé : '+email+'. Il pourra se connecter avec Google.');}catch(e){toast('Erreur : '+e.message);btn.disabled=false;}}
 
-function troisChiffres(n){const u=['','un','deux','trois','quatre','cinq','six','sept','huit','neuf','dix','onze','douze','treize','quatorze','quinze','seize','dix-sept','dix-huit','dix-neuf'];let s='';const c=Math.floor(n/100),r=n%100;if(c>0){s+=(c>1?u[c]+'-':'')+'cent';if(c>1&&r===0)s+='s';if(r>0)s+='-';}if(r>0){if(r<20){s+=u[r];}else{const d=Math.floor(r/10),un=r%10;const tens={2:'vingt',3:'trente',4:'quarante',5:'cinquante',6:'soixante',8:'quatre-vingt'};if(d===7){s+='soixante'+(un===1?'-et-onze':'-'+u[10+un]);}else if(d===9){s+='quatre-vingt-'+u[10+un];}else{let base=tens[d];if(d===8&&un===0)base+='s';s+=base;if(un===1&&d!==8)s+='-et-un';else if(un>0)s+='-'+u[un];}}}return s;}
-function enLettres(n){if(n===0)return 'zéro';const mille=Math.floor(n/1000),reste=n%1000;let s='';if(mille>0){s+=(mille>1?troisChiffres(mille)+'-':'')+'mille';if(reste>0)s+='-'+troisChiffres(reste);}else s=troisChiffres(reste);return s;}
-function montantEnLettres(mil){const d=Math.floor(mil/1000),m=mil%1000;let s=enLettres(d)+' dinar'+(d>1?'s':'');if(m>0)s+=' et '+enLettres(m)+' millime'+(m>1?'s':'');return s.charAt(0).toUpperCase()+s.slice(1);}
-function genVoucher(id){const p=state.purchases.find(x=>x.id===id);if(!p)return;const enL=montantEnLettres(p.montant);const dte=new Date(p.approvedAt||p.at).toLocaleDateString('fr-FR');const html=`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Bon de paiement ${p.ref}</title><style>body{font-family:Arial,sans-serif;color:#16243F;margin:0;padding:36px;background:#f4f6f9;}.v{max-width:720px;margin:auto;background:#fff;border:1px solid #D5DCE6;border-radius:14px;padding:32px;}.hd{display:flex;align-items:center;gap:14px;border-bottom:3px solid #2E5AAC;padding-bottom:16px;}.logo{width:54px;height:54px;border:3px solid #16243F;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;}.brand{font-size:12px;letter-spacing:2px;color:#5B6573;}h1{font-size:20px;margin:2px 0;color:#16243F;}table{width:100%;border-collapse:collapse;margin-top:18px;}td{padding:9px 6px;border-bottom:1px solid #eee;}.lbl{color:#5B6573;width:42%;}.amt{font-size:26px;font-weight:800;color:#16243F;}.lettres{font-style:italic;color:#1F365C;margin-top:14px;background:#E8EEF8;padding:12px 14px;border-radius:8px;}.sig{margin-top:34px;display:flex;justify-content:space-between;align-items:flex-end;}.sigbox{text-align:center;}.sigbox img{height:64px;}.line{border-top:1px solid #16243F;width:210px;margin-top:6px;font-size:12px;color:#5B6573;padding-top:4px;}.btn{background:#2E5AAC;color:#fff;border:none;padding:11px 18px;border-radius:8px;cursor:pointer;font-size:14px;}@media print{.noprint{display:none}body{background:#fff;}}</style></head><body><div class="v"><div class="hd"><div class="logo">SPE</div><div><div class="brand">SOFT POWER ELEVATION</div><h1>Bon de paiement</h1></div><div style="margin-left:auto;text-align:right;font-size:12px;color:#5B6573;">Réf. ${p.ref}<br>${dte}</div></div><table><tr><td class="lbl">Bénéficiaire / Fournisseur</td><td>${p.fournisseur}</td></tr><tr><td class="lbl">Demandeur</td><td>${userName(p.requestedBy)}</td></tr><tr><td class="lbl">Objet</td><td>${p.description}</td></tr><tr><td class="lbl">Mode de paiement</td><td>${p.mode==='credit'?'Crédit fournisseur':'Espèces'}</td></tr><tr><td class="lbl">Montant</td><td><span class="amt">${fmt(p.montant)}</span></td></tr></table><div class="lettres">Arrêté le présent bon à la somme de : <b>${enL}</b>.</div><div class="sig"><div class="sigbox">${p.signature?`<img src="${p.signature}">`:''}<div class="line">Approuvé par ${p.approvedBy?userName(p.approvedBy):'____________'}${p.approverType?' ('+p.approverType+')':''}</div></div><div class="sigbox"><div class="line">Le bénéficiaire</div></div></div><div class="noprint" style="margin-top:26px;text-align:right;"><button class="btn" onclick="window.print()">Imprimer / Enregistrer en PDF</button></div></div></body></html>`;const w=window.open('','_blank');if(!w){toast('Autorisez les pop-ups pour générer le bon de paiement.');return;}w.document.write(html);w.document.close();audit('BON_PAIEMENT','purchase',p.ref,p.montant);}
+function modalGuide(){openModal(`<h3>Comment utiliser</h3><div class="note">Connexion par Google (Gmail). Chacun voit seulement son espace.</div><div class="sectitle" style="margin-top:0;">Administrateur</div><ol style="margin:0 0 6px 18px;font-size:13px;line-height:1.7;"><li>Menu Utilisateurs → <b>Autoriser un compte</b> (saisir l'adresse Gmail + rôle + permissions).</li><li>La personne se connecte ensuite avec <b>Se connecter avec Google</b>.</li><li>Alimenter la caisse, transférer des avances, approuver, rapports, audit.</li></ol><div class="sectitle">Acheteur</div><ol style="margin:0 0 6px 18px;font-size:13px;line-height:1.7;"><li>Achats → Nouvel achat → montant, description, <b>photo de facture obligatoire</b>.</li><li>Les responsables reçoivent une notification et approuvent.</li></ol><div class="sectitle">Responsable</div><p style="font-size:13px;">Validations → Approuver &amp; signer (IP, appareil, téléphone, localisation et signature enregistrés) ou Refuser avec motif.</p><div class="actions"><button class="btn sec" onclick="closeModal()">Fermer</button></div>`);}
 
-function modalGuide(){openModal(`<h3>Comment utiliser SPE Cash Management</h3>
-<div class="note">Suivez ces étapes selon votre rôle. Devise : DT.</div>
-<div class="sectitle" style="margin-top:0;">Gérant administratif / Associé (Chaima, Cherif, Belgacem)</div>
-<ol style="margin:0 0 6px 18px;font-size:13px;line-height:1.7;">
-<li><b>Alimenter la caisse</b> : menu Caisse → Alimenter (banque, associé…).</li>
-<li><b>Transférer une avance</b> à un responsable : menu Caisse → Transférer.</li>
-<li><b>Approuver / rejeter</b> un achat : menu Validations → vérifier les pièces → Approuver &amp; signer. (Chaima, Cherif OU Belgacem peuvent approuver ; on ne valide pas son propre achat.)</li>
-<li><b>Créer des comptes</b> : menu Utilisateurs → Créer un compte (email, mot de passe, et cocher les permissions).</li>
-<li><b>Rapports &amp; audit</b> : menus Rapports et Audit.</li>
-</ol>
-<div class="sectitle">Responsable</div>
-<ol style="margin:0 0 6px 18px;font-size:13px;line-height:1.7;">
-<li><b>Déclarer un achat</b> : menu Achats → Nouvel achat. Choisir Espèces ou Crédit fournisseur.</li>
-<li>Joindre les <b>justificatifs</b> (bon de livraison obligatoire ; facture/reçu pour espèces ; photo optionnelle, scan auto).</li>
-<li>Soumettre → les gérants reçoivent une <b>notification</b> (cloche + son) et approuvent.</li>
-<li>Voir <b>mon solde</b> et ce qu'il reste à justifier sur le tableau de bord.</li>
-</ol>
-<div class="sectitle">Bon de paiement</div>
-<p style="font-size:13px;">Après approbation d'un achat, ouvrez son détail → <b>📄 Bon de paiement</b> (logo, montant en toutes lettres) à imprimer / enregistrer en PDF.</p>
-<div class="note warn">Installer l'app : bouton <b>⬇ Installer l'app</b> en haut (PC) ou « Ajouter à l'écran d'accueil » (téléphone) → l'app s'ouvre dans sa propre fenêtre.</div>
-<div class="actions"><button class="btn sec" onclick="closeModal()">Fermer</button></div>`);}
+function exportCSV(){const rows=[['Réf','Date','Acheteur','Description','Catégorie','Montant DT','Statut']];CACHE.purchases.forEach(p=>rows.push([p.ref,fmtTs(p.createdAt),userName(p.buyerUid),(p.description||'').replace(/;/g,' '),p.category||'',(p.amount/M).toFixed(3),p.status]));const csv=rows.map(r=>r.join(';')).join('\n');const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='rapport_spe_'+now().toISOString().slice(0,10)+'.csv';a.click();}
+
+// ---------------- PWA ----------------
 let deferredPrompt=null;
-window.addEventListener('beforeinstallprompt',(e)=>{e.preventDefault();deferredPrompt=e;const b=document.getElementById('installBtn');if(b)b.style.display='inline-flex';});
-function installApp(){if(deferredPrompt){deferredPrompt.prompt();deferredPrompt=null;}else{toast('Sur téléphone : menu du navigateur → « Ajouter à l\'écran d\'accueil ». Sur PC : icône d\'installation dans la barre d\'adresse.');}}
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}
-
-initLoginSelect();
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;});
+function installApp(){if(deferredPrompt){deferredPrompt.prompt();deferredPrompt=null;}else{toast('Menu du navigateur → Ajouter à l\'écran d\'accueil.');}}
+let waitingSW=null;
+function applyUpdate(){ if(waitingSW){waitingSW.postMessage('skipWaiting');} document.getElementById('updateBar').style.display='none'; setTimeout(()=>location.reload(),300); }
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      reg.addEventListener('updatefound',()=>{const nw=reg.installing;nw&&nw.addEventListener('statechange',()=>{ if(nw.state==='installed'&&navigator.serviceWorker.controller){ waitingSW=nw; document.getElementById('updateBar').style.display='flex'; } });});
+    }).catch(()=>{});
+    let refreshing=false; navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(refreshing)return; refreshing=true; location.reload(); });
+  });
+}
 </script>
 </body>
 </html>
