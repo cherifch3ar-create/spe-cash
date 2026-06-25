@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SPE Cash Management — Soft Power Elevation</title>
+<meta name="theme-color" content="#16243F">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
   :root{
     --navy:#16243F;--navy2:#1F365C;--blue:#2E5AAC;--blue-soft:#E8EEF8;
@@ -88,11 +91,11 @@
   </div>
   <div class="card">
     <h1 style="font-size:24px;">Connexion</h1>
-    <p class="muted" style="margin-bottom:6px;">Démonstration — choisissez un profil</p>
-    <div class="field"><label>Utilisateur</label><select id="loginUser"></select></div>
-    <div class="field"><label>Mot de passe</label><input type="password" value="demo1234"></div>
+    <p class="muted" style="margin-bottom:6px;">Choisissez votre compte et entrez votre mot de passe</p>
+    <div class="field"><label>Compte</label><select id="loginUser"></select></div>
+    <div class="field"><label>Mot de passe</label><input id="loginPwd" type="password" placeholder="Mot de passe" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <button class="btn" style="width:100%;margin-top:6px;" onclick="doLogin()">Se connecter</button>
-    <p class="muted" style="margin-top:14px;text-align:center;">Chérif (Gérant administratif) · Belgacem (Associé) · Helmi (Responsable) · Sonia (Comptable)</p>
+    <p class="muted" style="margin-top:14px;text-align:center;">Comptes gérants : Chaima Blidi · Cherif Blidi · Belgacem Fourtie<br>Mot de passe initial : <b>spe1234</b></p>
   </div>
 </div>
 
@@ -102,8 +105,8 @@
     <div class="title">SPE Cash Management</div>
     <div class="spacer"></div>
     <button class="bell" id="bell" onclick="openNotifs()">🔔<span class="dot"></span></button>
-    <span class="muted" style="color:#9fb0cc;font-size:12px;">Profil démo :</span>
-    <select id="roleSwitch" onchange="switchUser(this.value)"></select>
+    <button class="btn sm" id="installBtn" onclick="installApp()" style="display:none;background:#2E5AAC;color:#fff;border:none;">⬇ Installer l'app</button>
+    <button class="btn sm" onclick="modalGuide()" style="background:transparent;color:#fff;border:1px solid #34507f;">❓ Aide</button>
     <span class="chip" id="userChip"></span>
     <button class="btn sm" onclick="logout()" style="background:transparent;color:#fff;border:1px solid #34507f;">Déconnexion</button>
   </header>
@@ -129,10 +132,9 @@ function defaultPerms(role){return role==='manager'?Object.keys(ALLPERMS):role==
 
 let state={currentUid:null,seq:0,
   users:[
-    {uid:'u_cherif',prenom:'Chérif',nom:'Blidi',role:'manager',subtype:'Gérant administratif',fonction:'Gérant administratif',actif:true,perms:Object.keys(ALLPERMS)},
-    {uid:'u_belga',prenom:'Belgacem',nom:'',role:'manager',subtype:'Associé',fonction:'Associé',actif:true,perms:Object.keys(ALLPERMS)},
-    {uid:'u_helmi',prenom:'Helmi',nom:'',role:'responsable',subtype:'Responsable',fonction:'Responsable chantier',actif:true,perms:['dashboard','purchase']},
-    {uid:'u_sonia',prenom:'Sonia',nom:'',role:'comptable',subtype:'Comptable',fonction:'Comptable',actif:true,perms:['dashboard','reports','audit']}],
+    {uid:'u_chaima',prenom:'Chaima',nom:'Blidi',role:'manager',subtype:'Gérant administratif',fonction:'Gérant administratif',actif:true,email:'chaima@spe.tn',password:'spe1234',perms:Object.keys(ALLPERMS)},
+    {uid:'u_cherif',prenom:'Cherif',nom:'Blidi',role:'manager',subtype:'Gérant administratif',fonction:'Gérant administratif',actif:true,email:'cherif@spe.tn',password:'spe1234',perms:Object.keys(ALLPERMS)},
+    {uid:'u_belga',prenom:'Belgacem',nom:'Fourtie',role:'manager',subtype:'Associé',fonction:'Associé',actif:true,email:'belgacem@spe.tn',password:'spe1234',perms:Object.keys(ALLPERMS)}],
   accounts:{general:{balance:0}},purchases:[],cashOps:[],audit:[],notifs:[]};
 state.users.forEach(u=>{if(u.role!=='comptable')state.accounts['acc_'+u.uid]={balance:0};});
 
@@ -161,12 +163,12 @@ function rejectPurchase(id,r){const p=state.purchases.find(x=>x.id===id);if(!p)r
 
 let currentView='dashboard';
 function initLoginSelect(){document.getElementById('loginUser').innerHTML=state.users.map(u=>`<option value="${u.uid}">${userName(u.uid)} — ${approverLabel(u)}</option>`).join('');}
-function doLogin(){state.currentUid=document.getElementById('loginUser').value;enterApp();}
+function doLogin(){const id=document.getElementById('loginUser').value;const u=user(id);const pwd=(document.getElementById('loginPwd')||{}).value||'';if(u&&u.password&&u.password!==pwd){toast('Mot de passe incorrect (initial : spe1234).');return;}state.currentUid=id;enterApp();}
 function switchUser(id){state.currentUid=id;currentView='dashboard';render();}
 function logout(){document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';}
-function enterApp(){document.getElementById('login').style.display='none';document.getElementById('app').style.display='block';const rs=document.getElementById('roleSwitch');rs.innerHTML=state.users.map(u=>`<option value="${u.uid}">${userName(u.uid)} (${approverLabel(u)})</option>`).join('');rs.value=state.currentUid;currentView='dashboard';render();}
+function enterApp(){document.getElementById('login').style.display='none';document.getElementById('app').style.display='block';currentView='dashboard';render();}
 function navItems(){const items=[['dashboard','📊','Tableau de bord'],['purchases','🛍️','Achats']];if(can('fund')||can('advance'))items.push(['cash','💰','Caisse']);if(can('approve'))items.push(['validations','✅','Validations']);if(can('reports'))items.push(['reports','📈','Rapports']);if(can('users'))items.push(['users','👥','Utilisateurs']);if(can('audit'))items.push(['audit','🛡️','Audit']);items.push(['profile','👤','Profil']);return items;}
-function render(){document.getElementById('userChip').textContent=userName(state.currentUid)+' · '+approverLabel(me());document.getElementById('roleSwitch').value=state.currentUid;document.getElementById('nav').innerHTML=navItems().map(([v,ic,lbl])=>`<a class="${v===currentView?'active':''}" onclick="go('${v}')"><span class="ic">${ic}</span>${lbl}</a>`).join('');document.getElementById('main').innerHTML=({dashboard:viewDashboard,purchases:viewPurchases,cash:viewCash,validations:viewValidations,reports:viewReports,users:viewUsers,audit:viewAudit,profile:viewProfile}[currentView]||viewDashboard)();renderBell();}
+function render(){document.getElementById('userChip').textContent=userName(state.currentUid)+' · '+approverLabel(me());document.getElementById('nav').innerHTML=navItems().map(([v,ic,lbl])=>`<a class="${v===currentView?'active':''}" onclick="go('${v}')"><span class="ic">${ic}</span>${lbl}</a>`).join('');document.getElementById('main').innerHTML=({dashboard:viewDashboard,purchases:viewPurchases,cash:viewCash,validations:viewValidations,reports:viewReports,users:viewUsers,audit:viewAudit,profile:viewProfile}[currentView]||viewDashboard)();renderBell();}
 function go(v){currentView=v;render();}
 
 function kpi(ic,lbl,val,color){return `<div class="card kpi"><div class="ic" style="background:${color}1f;color:${color}">${ic}</div><div class="lbl">${lbl}</div><div class="val">${val}</div></div>`;}
@@ -222,7 +224,7 @@ function viewDashboard(){
       <div style="margin-top:10px;"><button class="btn sm sec" onclick="modalUserDetail('${state.currentUid}')">Voir le détail</button></div></div>`;
   }
   const recent=state.purchases.slice(0,6).map(p=>purchaseRow(p)).join('')||emptyRow('Aucun achat');
-  const demoBtn=can('fund')?`<button class="btn sm sec" onclick="runDemo()">▶ Lancer le scénario démo</button>`:'';
+  const demoBtn=`<button class="btn sm sec" onclick="modalGuide()">❓ Comment utiliser</button>`;
   return `<h1>Tableau de bord</h1><div class="sub">Vue d'ensemble de la trésorerie · ${now().toLocaleDateString('fr-FR')}</div>
     <div class="toolbar">${demoBtn}</div><div class="grid kpis">${kpis.join('')}</div>${fundTiles}${byWho}${outTable}
     <div class="sectitle">Derniers achats</div>
@@ -285,32 +287,40 @@ function modalSignature(onConfirm,title){openModal(`<h3>${title||'Signature éle
 function setupSig(onConfirm){sigCanvas=document.getElementById('sig');sigCanvas.width=sigCanvas.offsetWidth;sigCtx=sigCanvas.getContext('2d');sigCtx.fillStyle='#F4F6F9';sigCtx.fillRect(0,0,sigCanvas.width,sigCanvas.height);sigCtx.strokeStyle='#16243F';sigCtx.lineWidth=2.4;sigCtx.lineCap='round';sigCtx.lineJoin='round';sigHas=false;const pos=e=>{const r=sigCanvas.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return {x:t.clientX-r.left,y:t.clientY-r.top};};const start=e=>{sigDrawing=true;const p=pos(e);sigCtx.beginPath();sigCtx.moveTo(p.x,p.y);e.preventDefault();};const move=e=>{if(!sigDrawing)return;const p=pos(e);sigCtx.lineTo(p.x,p.y);sigCtx.stroke();sigHas=true;e.preventDefault();};const end=()=>{sigDrawing=false;};sigCanvas.onmousedown=start;sigCanvas.onmousemove=move;window.onmouseup=end;sigCanvas.ontouchstart=start;sigCanvas.ontouchmove=move;sigCanvas.ontouchend=end;document.getElementById('sigConfirm').onclick=()=>{if(!sigHas){toast('Veuillez signer.');return;}const data=sigCanvas.toDataURL('image/png');closeModal();onConfirm(data);};}
 function clearSig(){sigCtx.fillStyle='#F4F6F9';sigCtx.fillRect(0,0,sigCanvas.width,sigCanvas.height);sigHas=false;}
 
-function modalNewUser(){const opts=Object.entries(ALLPERMS).map(([k,v])=>`<label class="ck"><input type="checkbox" class="permck" value="${k}" ${(k==='dashboard'||k==='purchase')?'checked':''}> ${v}</label>`).join('');openModal(`<h3>Créer un compte</h3><div class="field"><label>Prénom</label><input id="uPre"></div><div class="field"><label>Nom</label><input id="uNom"></div><div class="field"><label>Fonction</label><input id="uFon" placeholder="ex. Responsable chantier"></div><div class="field"><label>Type</label><select id="uRole" onchange="presetPerms(this.value)"><option value="responsable:Responsable">Responsable</option><option value="manager:Gérant administratif">Gérant administratif</option><option value="manager:Associé">Associé</option><option value="comptable:Comptable">Comptable</option></select></div><label style="font-size:12px;color:var(--muted);font-weight:600;">Options / permissions du compte (cochez)</label><div style="margin:6px 0 2px;">${opts}</div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn" onclick="submitUser()">Créer le compte</button></div>`);}
+function modalNewUser(){const opts=Object.entries(ALLPERMS).map(([k,v])=>`<label class="ck"><input type="checkbox" class="permck" value="${k}" ${(k==='dashboard'||k==='purchase')?'checked':''}> ${v}</label>`).join('');openModal(`<h3>Créer un compte</h3><div class="field"><label>Prénom</label><input id="uPre"></div><div class="field"><label>Nom</label><input id="uNom"></div><div class="field"><label>Fonction</label><input id="uFon" placeholder="ex. Responsable chantier"></div><div class="field"><label>Email (identifiant de connexion)</label><input id="uEmail" placeholder="ex. helmi@spe.tn"></div><div class="field"><label>Mot de passe initial</label><input id="uPwd" value="spe1234"></div><div class="field"><label>Type</label><select id="uRole" onchange="presetPerms(this.value)"><option value="responsable:Responsable">Responsable</option><option value="manager:Gérant administratif">Gérant administratif</option><option value="manager:Associé">Associé</option><option value="comptable:Comptable">Comptable</option></select></div><label style="font-size:12px;color:var(--muted);font-weight:600;">Options / permissions du compte (cochez)</label><div style="margin:6px 0 2px;">${opts}</div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn" onclick="submitUser()">Créer le compte</button></div>`);}
 function presetPerms(sel){const role=sel.split(':')[0];const dp=defaultPerms(role);document.querySelectorAll('.permck').forEach(c=>{c.checked=dp.includes(c.value);});}
-function submitUser(){const pre=document.getElementById('uPre').value.trim();if(!pre){toast('Prénom requis.');return;}const id='u_'+uid();const sel=document.getElementById('uRole').value;const role=sel.split(':')[0];const subtype=sel.split(':')[1]||ROLES[role];const perms=Array.from(document.querySelectorAll('.permck:checked')).map(c=>c.value);if(perms.length===0)perms.push('dashboard');state.users.push({uid:id,prenom:pre,nom:document.getElementById('uNom').value.trim(),role,subtype,fonction:document.getElementById('uFon').value.trim()||subtype,actif:true,perms});if(role!=='comptable')state.accounts['acc_'+id]={balance:0};audit('CREER_UTILISATEUR','user',id);closeModal();enterApp();render();toast('Compte créé avec ses options.');}
+function submitUser(){const pre=document.getElementById('uPre').value.trim();if(!pre){toast('Prénom requis.');return;}const id='u_'+uid();const sel=document.getElementById('uRole').value;const role=sel.split(':')[0];const subtype=sel.split(':')[1]||ROLES[role];const perms=Array.from(document.querySelectorAll('.permck:checked')).map(c=>c.value);if(perms.length===0)perms.push('dashboard');const email=(document.getElementById('uEmail').value||'').trim();const pwd=(document.getElementById('uPwd').value||'spe1234').trim();state.users.push({uid:id,prenom:pre,nom:document.getElementById('uNom').value.trim(),role,subtype,fonction:document.getElementById('uFon').value.trim()||subtype,actif:true,email,password:pwd,perms});if(role!=='comptable')state.accounts['acc_'+id]={balance:0};audit('CREER_UTILISATEUR','user',id);closeModal();render();toast('Compte créé. Connexion : '+(email||'(sans email)')+' / '+pwd);}
 
 function troisChiffres(n){const u=['','un','deux','trois','quatre','cinq','six','sept','huit','neuf','dix','onze','douze','treize','quatorze','quinze','seize','dix-sept','dix-huit','dix-neuf'];let s='';const c=Math.floor(n/100),r=n%100;if(c>0){s+=(c>1?u[c]+'-':'')+'cent';if(c>1&&r===0)s+='s';if(r>0)s+='-';}if(r>0){if(r<20){s+=u[r];}else{const d=Math.floor(r/10),un=r%10;const tens={2:'vingt',3:'trente',4:'quarante',5:'cinquante',6:'soixante',8:'quatre-vingt'};if(d===7){s+='soixante'+(un===1?'-et-onze':'-'+u[10+un]);}else if(d===9){s+='quatre-vingt-'+u[10+un];}else{let base=tens[d];if(d===8&&un===0)base+='s';s+=base;if(un===1&&d!==8)s+='-et-un';else if(un>0)s+='-'+u[un];}}}return s;}
 function enLettres(n){if(n===0)return 'zéro';const mille=Math.floor(n/1000),reste=n%1000;let s='';if(mille>0){s+=(mille>1?troisChiffres(mille)+'-':'')+'mille';if(reste>0)s+='-'+troisChiffres(reste);}else s=troisChiffres(reste);return s;}
 function montantEnLettres(mil){const d=Math.floor(mil/1000),m=mil%1000;let s=enLettres(d)+' dinar'+(d>1?'s':'');if(m>0)s+=' et '+enLettres(m)+' millime'+(m>1?'s':'');return s.charAt(0).toUpperCase()+s.slice(1);}
 function genVoucher(id){const p=state.purchases.find(x=>x.id===id);if(!p)return;const enL=montantEnLettres(p.montant);const dte=new Date(p.approvedAt||p.at).toLocaleDateString('fr-FR');const html=`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Bon de paiement ${p.ref}</title><style>body{font-family:Arial,sans-serif;color:#16243F;margin:0;padding:36px;background:#f4f6f9;}.v{max-width:720px;margin:auto;background:#fff;border:1px solid #D5DCE6;border-radius:14px;padding:32px;}.hd{display:flex;align-items:center;gap:14px;border-bottom:3px solid #2E5AAC;padding-bottom:16px;}.logo{width:54px;height:54px;border:3px solid #16243F;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;}.brand{font-size:12px;letter-spacing:2px;color:#5B6573;}h1{font-size:20px;margin:2px 0;color:#16243F;}table{width:100%;border-collapse:collapse;margin-top:18px;}td{padding:9px 6px;border-bottom:1px solid #eee;}.lbl{color:#5B6573;width:42%;}.amt{font-size:26px;font-weight:800;color:#16243F;}.lettres{font-style:italic;color:#1F365C;margin-top:14px;background:#E8EEF8;padding:12px 14px;border-radius:8px;}.sig{margin-top:34px;display:flex;justify-content:space-between;align-items:flex-end;}.sigbox{text-align:center;}.sigbox img{height:64px;}.line{border-top:1px solid #16243F;width:210px;margin-top:6px;font-size:12px;color:#5B6573;padding-top:4px;}.btn{background:#2E5AAC;color:#fff;border:none;padding:11px 18px;border-radius:8px;cursor:pointer;font-size:14px;}@media print{.noprint{display:none}body{background:#fff;}}</style></head><body><div class="v"><div class="hd"><div class="logo">SPE</div><div><div class="brand">SOFT POWER ELEVATION</div><h1>Bon de paiement</h1></div><div style="margin-left:auto;text-align:right;font-size:12px;color:#5B6573;">Réf. ${p.ref}<br>${dte}</div></div><table><tr><td class="lbl">Bénéficiaire / Fournisseur</td><td>${p.fournisseur}</td></tr><tr><td class="lbl">Demandeur</td><td>${userName(p.requestedBy)}</td></tr><tr><td class="lbl">Objet</td><td>${p.description}</td></tr><tr><td class="lbl">Mode de paiement</td><td>${p.mode==='credit'?'Crédit fournisseur':'Espèces'}</td></tr><tr><td class="lbl">Montant</td><td><span class="amt">${fmt(p.montant)}</span></td></tr></table><div class="lettres">Arrêté le présent bon à la somme de : <b>${enL}</b>.</div><div class="sig"><div class="sigbox">${p.signature?`<img src="${p.signature}">`:''}<div class="line">Approuvé par ${p.approvedBy?userName(p.approvedBy):'____________'}${p.approverType?' ('+p.approverType+')':''}</div></div><div class="sigbox"><div class="line">Le bénéficiaire</div></div></div><div class="noprint" style="margin-top:26px;text-align:right;"><button class="btn" onclick="window.print()">Imprimer / Enregistrer en PDF</button></div></div></body></html>`;const w=window.open('','_blank');if(!w){toast('Autorisez les pop-ups pour générer le bon de paiement.');return;}w.document.write(html);w.document.close();audit('BON_PAIEMENT','purchase',p.ref,p.montant);}
 
-function runDemo(){
-  state.purchases=[];state.cashOps=[];state.audit=[];state.notifs=[];state.seq=0;
-  Object.keys(state.accounts).forEach(k=>state.accounts[k].balance=0);
-  const save=state.currentUid;
-  state.currentUid='u_belga'; fundCash(10000*M,'associe','Apport initial');
-  state.currentUid='u_cherif'; fundCash(5000*M,'banque','Versement banque');
-  state.currentUid='u_belga'; transferAdvance('u_helmi',5000*M,'Avance chantier');
-  state.currentUid='u_helmi';
-  const p1=createPurchase({fournisseur:'Métal Pro',montant:1300*M,categorie:'fournisseur',description:'Achat matériel ascenseur',mode:'especes',docs:{facture:'facture.pdf',bl:'bl.pdf'}});
-  const p2=createPurchase({fournisseur:'ElecPlus',montant:1200*M,categorie:'fournisseur',description:'Câblage et accessoires',mode:'especes',docs:{facture:'facture2.pdf',bl:'bl2.pdf'}});
-  createPurchase({fournisseur:'Quincaillerie',montant:800*M,categorie:'depense_chantier',description:'Petit outillage',mode:'especes',docs:{facture:'f3.pdf',bl:'bl3.pdf'}});
-  const pc=createPurchase({fournisseur:'AciersSud',montant:2000*M,categorie:'fournisseur',description:'Tubes acier (à crédit fournisseur)',mode:'credit',docs:{bl:'bon_livraison_credit.pdf'}});
-  state.currentUid='u_cherif'; approvePurchase(p1.id,null); approvePurchase(p2.id,null);
-  state.currentUid='u_belga'; approvePurchase(pc.id,null);
-  state.currentUid=save; render();
-  toast('Démo : 15 000 DT alimentés, 5 000 DT avance à Helmi, 2 500 DT payés (reste 2 500), 2 000 DT à crédit, 1 achat 800 DT en attente.');
-}
+function modalGuide(){openModal(`<h3>Comment utiliser SPE Cash Management</h3>
+<div class="note">Suivez ces étapes selon votre rôle. Devise : DT.</div>
+<div class="sectitle" style="margin-top:0;">Gérant administratif / Associé (Chaima, Cherif, Belgacem)</div>
+<ol style="margin:0 0 6px 18px;font-size:13px;line-height:1.7;">
+<li><b>Alimenter la caisse</b> : menu Caisse → Alimenter (banque, associé…).</li>
+<li><b>Transférer une avance</b> à un responsable : menu Caisse → Transférer.</li>
+<li><b>Approuver / rejeter</b> un achat : menu Validations → vérifier les pièces → Approuver &amp; signer. (Chaima, Cherif OU Belgacem peuvent approuver ; on ne valide pas son propre achat.)</li>
+<li><b>Créer des comptes</b> : menu Utilisateurs → Créer un compte (email, mot de passe, et cocher les permissions).</li>
+<li><b>Rapports &amp; audit</b> : menus Rapports et Audit.</li>
+</ol>
+<div class="sectitle">Responsable</div>
+<ol style="margin:0 0 6px 18px;font-size:13px;line-height:1.7;">
+<li><b>Déclarer un achat</b> : menu Achats → Nouvel achat. Choisir Espèces ou Crédit fournisseur.</li>
+<li>Joindre les <b>justificatifs</b> (bon de livraison obligatoire ; facture/reçu pour espèces ; photo optionnelle, scan auto).</li>
+<li>Soumettre → les gérants reçoivent une <b>notification</b> (cloche + son) et approuvent.</li>
+<li>Voir <b>mon solde</b> et ce qu'il reste à justifier sur le tableau de bord.</li>
+</ol>
+<div class="sectitle">Bon de paiement</div>
+<p style="font-size:13px;">Après approbation d'un achat, ouvrez son détail → <b>📄 Bon de paiement</b> (logo, montant en toutes lettres) à imprimer / enregistrer en PDF.</p>
+<div class="note warn">Installer l'app : bouton <b>⬇ Installer l'app</b> en haut (PC) ou « Ajouter à l'écran d'accueil » (téléphone) → l'app s'ouvre dans sa propre fenêtre.</div>
+<div class="actions"><button class="btn sec" onclick="closeModal()">Fermer</button></div>`);}
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',(e)=>{e.preventDefault();deferredPrompt=e;const b=document.getElementById('installBtn');if(b)b.style.display='inline-flex';});
+function installApp(){if(deferredPrompt){deferredPrompt.prompt();deferredPrompt=null;}else{toast('Sur téléphone : menu du navigateur → « Ajouter à l\'écran d\'accueil ». Sur PC : icône d\'installation dans la barre d\'adresse.');}}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}
 
 initLoginSelect();
 </script>
