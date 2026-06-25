@@ -72,9 +72,14 @@
     <div class="logo">SPE</div>
     <div class="brand">SOFT POWER ELEVATION</div>
     <h1>Money Cash Manager</h1>
-    <p class="muted" style="margin-top:8px;">Connectez-vous avec votre compte Google</p>
-    <button class="gbtn" onclick="loginGoogle()"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">Se connecter avec Google</button>
-    <p class="muted" style="margin-top:16px;font-size:12px;">Seuls les comptes autorisés par l'administrateur peuvent accéder.</p>
+    <p class="muted" style="margin-top:8px;">Connectez-vous ou inscrivez-vous</p>
+    <button class="gbtn" onclick="loginGoogle()"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">Continuer avec Google</button>
+    <button class="gbtn" onclick="loginFacebook()" style="margin-top:10px;"><span style="color:#1877F2;font-weight:800;font-size:18px;">f</span> Continuer avec Facebook</button>
+    <div style="margin:14px 0 4px;color:var(--muted);font-size:12px;">— ou par email —</div>
+    <div class="field" style="text-align:left;margin:8px 0;"><input id="authEmail" type="email" placeholder="Email"></div>
+    <div class="field" style="text-align:left;margin:8px 0;"><input id="authPwd" type="password" placeholder="Mot de passe (min. 6)"></div>
+    <div style="display:flex;gap:8px;"><button class="btn" style="flex:1;" onclick="emailLogin()">Se connecter</button><button class="btn sec" style="flex:1;" onclick="emailRegister()">S'inscrire</button></div>
+    <p class="muted" style="margin-top:14px;font-size:12px;">Après inscription, l'administrateur doit autoriser votre accès.</p>
   </div>
 </div>
 
@@ -125,7 +130,7 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
 
 let ME=null;            // profil utilisateur courant (doc users)
 let CURRENT_VIEW='dashboard';
-let CACHE={users:[],cashboxes:{},purchases:[],notifs:[],audit:[],cashops:[]};
+let CACHE={users:[],cashboxes:{},purchases:[],notifs:[],audit:[],cashops:[],fundings:[]};
 let UNSUB=[];
 
 function can(p){return !!(ME&&ME.perms&&ME.perms.includes(p));}
@@ -136,6 +141,11 @@ function loginGoogle(){
   const provider=new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider).catch(e=>{ if(e.code==='auth/popup-blocked'||e.code==='auth/cancelled-popup-request'){auth.signInWithRedirect(provider);} else {toast('Connexion annulée ou échouée.');} });
 }
+function loginFacebook(){ const p=new firebase.auth.FacebookAuthProvider(); auth.signInWithPopup(p).catch(e=>{ if(e.code==='auth/operation-not-allowed'){toast('Facebook pas encore activé (config en attente). Utilisez Google ou Email.');} else if(e.code==='auth/popup-blocked'){auth.signInWithRedirect(p);} else if(e.code!=='auth/cancelled-popup-request'){toast('Connexion Facebook échouée.');} }); }
+function emailLogin(){ const e=(document.getElementById('authEmail').value||'').trim(); const p=document.getElementById('authPwd').value; if(!e||!p){toast('Email et mot de passe requis.');return;} auth.signInWithEmailAndPassword(e,p).catch(err=>{ toast(err.code==='auth/operation-not-allowed'?'Connexion email pas encore activée.':((err.code||'').includes('wrong-password')||(err.code||'').includes('user-not-found')||(err.code||'').includes('invalid-credential')?'Email ou mot de passe incorrect.':'Échec : '+err.code)); }); }
+function emailRegister(){ const e=(document.getElementById('authEmail').value||'').trim(); const p=document.getElementById('authPwd').value; if(!e||!e.includes('@')||p.length<6){toast('Email valide + mot de passe d\'au moins 6 caractères.');return;} auth.createUserWithEmailAndPassword(e,p).catch(err=>{ toast(err.code==='auth/operation-not-allowed'?'Inscription email pas encore activée.':(err.code==='auth/email-already-in-use'?'Cet email a déjà un compte — utilisez Se connecter.':'Échec : '+err.code)); }); }
+function showPending(email){ document.getElementById('app').style.display='none'; const lg=document.getElementById('login'); lg.style.display='flex'; lg.querySelector('.card').innerHTML='<div class="logo" style="margin:0 auto 16px;width:74px;height:74px;border:3px solid var(--navy);border-radius:18px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:24px;color:var(--navy);">SPE</div><h1 style="color:var(--navy);">Inscription en attente</h1><p class="muted" style="margin-top:10px;">Votre compte <b>'+email+'</b> est enregistré. L\'administrateur doit autoriser votre accès. Réessayez ensuite.</p><button class="btn" style="width:100%;margin-top:20px;" onclick="location.reload()">Actualiser</button><button class="btn sec" style="width:100%;margin-top:10px;" onclick="logout()">Se déconnecter</button>'; }
+function showRefused(email){ document.getElementById('app').style.display='none'; const lg=document.getElementById('login'); lg.style.display='flex'; lg.querySelector('.card').innerHTML='<div class="logo" style="margin:0 auto 16px;width:74px;height:74px;border:3px solid var(--red);border-radius:18px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:24px;color:var(--red);">SPE</div><h1 style="color:var(--red);">Accès refusé</h1><p class="muted" style="margin-top:10px;">L\'inscription de <b>'+email+'</b> a été refusée par l\'administrateur.</p><button class="btn sec" style="width:100%;margin-top:20px;" onclick="logout()">Se déconnecter</button>'; }
 function logout(){ UNSUB.forEach(u=>{try{u()}catch(e){}});UNSUB=[]; auth.signOut(); }
 
 auth.onAuthStateChanged(async (user)=>{
@@ -165,12 +175,15 @@ auth.onAuthStateChanged(async (user)=>{
       await db.collection('cashboxes').doc('general').set({type:'generale',balance:0,currency:'DT'},{merge:true});
       prof={id:user.uid,...adminDoc};
     }
-    if(!prof){ // non autorisé
-      document.getElementById('app').style.display='none';
-      document.getElementById('login').style.display='flex';
-      document.getElementById('login').querySelector('.card').innerHTML='<div class="logo" style="margin:0 auto 16px;width:74px;height:74px;border:3px solid var(--navy);border-radius:18px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:24px;color:var(--navy);">SPE</div><h1 style="color:var(--navy);">Accès non autorisé</h1><p class="muted" style="margin-top:10px;">Le compte <b>'+email+'</b> n\'est pas encore autorisé. Demandez à l\'administrateur (Cherif) de créer votre compte avec cette adresse Gmail.</p><button class="btn" style="width:100%;margin-top:20px;" onclick="logout()">Se déconnecter</button>';
-      return;
+    if(!prof){
+      const prov=(user.providerData[0]&&user.providerData[0].providerId)||'email';
+      const pend={uid:user.uid,prenom:(user.displayName||'').split(' ')[0]||'',nom:(user.displayName||'').split(' ').slice(1).join(' '),email:email,role:'',perms:['dashboard'],status:'pending',actif:false,provider:prov,photoUrl:user.photoURL||null,createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+      await db.collection('users').doc(user.uid).set(pend,{merge:true});
+      try{ const admins=await db.collection('users').where('role','==','admin').get(); admins.forEach(a=>notify(a.id,'Nouvelle inscription',email+' demande l\'accès.')); }catch(e){}
+      showPending(email); return;
     }
+    if(prof.status==='refused'){ showRefused(prof.email||email); return; }
+    if(prof.status==='pending'||!prof.role){ showPending(prof.email||email); return; }
     if(prof.actif===false){ toast('Compte désactivé.'); logout(); return; }
     ME=prof;
     // s'assurer que la caisse user existe
@@ -190,6 +203,7 @@ function startListeners(){
   UNSUB.push(db.collection('cashboxes').onSnapshot(s=>{CACHE.cashboxes={};s.docs.forEach(d=>CACHE.cashboxes[d.id]=d.data());softRender();},()=>{}));
   UNSUB.push(db.collection('purchases').orderBy('createdAt','desc').limit(200).onSnapshot(s=>{CACHE.purchases=s.docs.map(d=>({id:d.id,...d.data()}));softRender();},()=>{}));
   UNSUB.push(db.collection('cashOperations').orderBy('createdAt','desc').limit(100).onSnapshot(s=>{CACHE.cashops=s.docs.map(d=>({id:d.id,...d.data()}));softRender();},()=>{}));
+  UNSUB.push(db.collection('fundings').orderBy('createdAt','desc').limit(100).onSnapshot(s=>{CACHE.fundings=s.docs.map(d=>({id:d.id,...d.data()}));softRender();},()=>{}));
   UNSUB.push(db.collection('notifications').where('userUid','==',auth.currentUser.uid).limit(50).onSnapshot(s=>{CACHE.notifs=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));renderBell();if(CURRENT_VIEW)softRender();},()=>{}));
   if(can('audit')) UNSUB.push(db.collection('auditLogs').orderBy('createdAt','desc').limit(100).onSnapshot(s=>{CACHE.audit=s.docs.map(d=>({id:d.id,...d.data()}));softRender();},()=>{}));
 }
@@ -207,9 +221,15 @@ function getGeo(){ return new Promise(res=>{ if(!navigator.geolocation)return re
 
 // ---------------- OPÉRATIONS ----------------
 async function fundCash(amount,category,note){
-  const genRef=db.collection('cashboxes').doc('general');
-  await db.runTransaction(async tx=>{ const g=await tx.get(genRef); const b=(g.data()?.balance)||0; const nb=b+amount; tx.set(genRef,{type:'generale',balance:nb,currency:'DT'},{merge:true}); const op=db.collection('cashOperations').doc(); tx.set(op,{type:'entree',category,amount,to:'general',by:auth.currentUser.uid,note:note||null,createdAt:firebase.firestore.FieldValue.serverTimestamp()}); });
-  audit('ALIMENTER_CAISSE','cashbox','general',amount);
+  await db.collection('fundings').add({amount,category,note:note||null,requestedBy:auth.currentUser.uid,status:'en_attente',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  audit('DEMANDE_ALIMENTATION','funding','',amount);
+  CACHE.users.filter(u=>u.perms&&u.perms.includes('approve')&&u.actif!==false).forEach(u=>notify(u.id,'Alimentation à autoriser',fmt(amount)+' · '+(category||'')+' · par '+userName(auth.currentUser.uid)));
+}
+async function decideFunding(id,decision){
+  const fRef=db.collection('fundings').doc(id);
+  await db.runTransaction(async tx=>{ const s=await tx.get(fRef); if(!s.exists)throw new Error('Introuvable'); const f=s.data(); if(f.status!=='en_attente')throw new Error('Déjà traité'); if(f.requestedBy===auth.currentUser.uid)throw new Error('Séparation des tâches : vous ne pouvez pas autoriser votre propre alimentation'); if(decision==='approuve'){ const gRef=db.collection('cashboxes').doc('general'); const g=await tx.get(gRef); const b=(g.data()?.balance)||0; tx.set(gRef,{type:'generale',balance:b+f.amount,currency:'DT'},{merge:true}); const op=db.collection('cashOperations').doc(); tx.set(op,{type:'entree',category:f.category,amount:f.amount,to:'general',by:f.requestedBy,approvedBy:auth.currentUser.uid,note:f.note,createdAt:firebase.firestore.FieldValue.serverTimestamp()}); } tx.update(fRef,{status:decision,approverUid:auth.currentUser.uid,approverName:((ME.prenom||'')+' '+(ME.nom||'')).trim(),decidedAt:firebase.firestore.FieldValue.serverTimestamp()}); });
+  audit(decision==='approuve'?'APPROUVER_ALIMENTATION':'REFUSER_ALIMENTATION','funding',id,null);
+  const f=(await fRef.get()).data(); notify(f.requestedBy,'Alimentation '+(decision==='approuve'?'autorisée':'refusée'),fmt(f.amount));
 }
 async function transferAdvance(toUid,amount,note){
   const genRef=db.collection('cashboxes').doc('general'); const uRef=db.collection('cashboxes').doc('box_'+toUid);
@@ -241,13 +261,13 @@ async function decidePurchase(id,decision,extra){
 }
 
 // ---------------- RENDU ----------------
-function navItems(){const it=[['dashboard','📊','Tableau de bord'],['purchases','🛍️','Achats']];if(can('fund')||can('advance'))it.push(['cash','💰','Caisse']);if(can('approve'))it.push(['validations','✅','Validations']);if(can('reports'))it.push(['reports','📈','Rapports']);if(can('users'))it.push(['users','👥','Utilisateurs']);if(can('audit'))it.push(['audit','🛡️','Audit']);it.push(['profile','👤','Profil']);return it;}
+function navItems(){const it=[['dashboard','📊','Tableau de bord'],['purchases','🛍️','Achats']];if(can('fund')||can('advance'))it.push(['cash','💰','Caisse']);if(can('approve'))it.push(['validations','✅','Validations']);if(can('reports'))it.push(['reports','📈','Rapports']);if(can('users')){const np=CACHE.users.filter(u=>u.status==='pending'||(!u.role&&u.actif===false)).length;it.push(['registrations','📝','Inscriptions'+(np?' ('+np+')':'')]);it.push(['users','👥','Utilisateurs']);}if(can('audit'))it.push(['audit','🛡️','Audit']);it.push(['profile','👤','Profil']);return it;}
 function go(v){CURRENT_VIEW=v;render();}
 function render(){
   if(!ME)return;
   const chip=document.getElementById('userChip'); chip.innerHTML=(ME.photoUrl?('<img src="'+ME.photoUrl+'">'):'')+((ME.prenom||'')+' · '+roleLabel(ME.role));
   document.getElementById('nav').innerHTML=navItems().map(([v,ic,l])=>`<a class="${v===CURRENT_VIEW?'active':''}" onclick="go('${v}')"><span class="ic">${ic}</span>${l}</a>`).join('');
-  document.getElementById('main').innerHTML=({dashboard:viewDashboard,purchases:viewPurchases,cash:viewCash,validations:viewValidations,reports:viewReports,users:viewUsers,audit:viewAudit,profile:viewProfile}[CURRENT_VIEW]||viewDashboard)();
+  document.getElementById('main').innerHTML=({dashboard:viewDashboard,purchases:viewPurchases,cash:viewCash,validations:viewValidations,reports:viewReports,users:viewUsers,audit:viewAudit,registrations:viewRegistrations,profile:viewProfile}[CURRENT_VIEW]||viewDashboard)();
   renderBell();
 }
 function roleLabel(r){return {admin:'Administrateur',caissier:'Caissier',acheteur:'Acheteur',responsable:'Responsable',comptable:'Comptable'}[r]||r;}
@@ -285,11 +305,15 @@ function viewPurchases(){
   return `<h1>Achats</h1><div class="sub">Déclaration et suivi</div>${can('purchase')?'<div class="toolbar"><button class="btn" onclick="modalNewPurchase()">＋ Nouvel achat</button></div>':''}<div class="card"><table><tr><th>Réf.</th><th>Description</th><th>Montant</th><th>Statut</th><th></th></tr>${rows}</table></div>`;
 }
 function viewValidations(){
-  const pend=CACHE.purchases.filter(p=>p.status==='en_attente');
-  if(!pend.length)return `<h1>Validations</h1><div class="sub">Dépenses en attente</div><div class="card" style="text-align:center;padding:34px;"><div style="font-size:34px;">✅</div><p class="muted" style="margin-top:8px;">Aucune dépense en attente.</p></div>`;
-  const rows=pend.map(p=>{const own=p.buyerUid===ME.uid;return `<tr><td><b>${p.ref}</b></td><td>${p.description||''}<div class="muted">${userName(p.buyerUid)}</div></td><td style="font-weight:700;">${fmt(p.amount)}</td><td><button class="btn sm sec" onclick="modalPurchase('${p.id}')">Voir</button> ${own?'<span class="muted">Votre demande</span>':`<button class="btn sm green" onclick="modalApprove('${p.id}')">Approuver</button> <button class="btn sm red" onclick="modalReject('${p.id}')">Refuser</button>`}</td></tr>`;}).join('');
-  return `<h1>Validations</h1><div class="sub">${pend.length} en attente</div><div class="note warn">On ne valide pas son propre achat. À l'approbation : IP, appareil, téléphone, localisation et signature sont enregistrés.</div><div class="card"><table><tr><th>Réf.</th><th>Description</th><th>Montant</th><th>Action</th></tr>${rows}</table></div>`;
+  const pendP=CACHE.purchases.filter(p=>p.status==='en_attente');
+  const pendF=CACHE.fundings.filter(f=>f.status==='en_attente');
+  if(!pendP.length&&!pendF.length)return `<h1>Validations</h1><div class="sub">À valider</div><div class="card" style="text-align:center;padding:34px;"><div style="font-size:34px;">✅</div><p class="muted" style="margin-top:8px;">Rien en attente.</p></div>`;
+  let html=`<h1>Validations</h1><div class="sub">${pendP.length+pendF.length} en attente</div><div class="note warn">On ne valide pas sa propre demande. À l'approbation d'un achat : IP, appareil, téléphone, localisation et signature sont enregistrés.</div>`;
+  if(pendF.length){const fr=pendF.map(f=>{const own=f.requestedBy===ME.uid;return `<tr><td>Alimentation · ${f.category||''}<div class="muted">par ${userName(f.requestedBy)}${f.note?(' · '+f.note):''}</div></td><td style="font-weight:700;">${fmt(f.amount)}</td><td>${own?'<span class="muted">Votre demande</span>':`<button class="btn sm green" onclick="decideFundBtn('${f.id}','approuve',this)">Autoriser</button> <button class="btn sm red" onclick="decideFundBtn('${f.id}','refuse',this)">Refuser</button>`}</td></tr>`;}).join('');html+=`<div class="sectitle">Alimentations de caisse à autoriser</div><div class="card"><table><tr><th>Objet</th><th>Montant</th><th>Action</th></tr>${fr}</table></div>`;}
+  if(pendP.length){const rows=pendP.map(p=>{const own=p.buyerUid===ME.uid;return `<tr><td><b>${p.ref}</b></td><td>${p.description||''}<div class="muted">${userName(p.buyerUid)}</div></td><td style="font-weight:700;">${fmt(p.amount)}</td><td><button class="btn sm sec" onclick="modalPurchase('${p.id}')">Voir</button> ${own?'<span class="muted">Votre demande</span>':`<button class="btn sm green" onclick="modalApprove('${p.id}')">Approuver</button> <button class="btn sm red" onclick="modalReject('${p.id}')">Refuser</button>`}</td></tr>`;}).join('');html+=`<div class="sectitle">Achats à valider</div><div class="card"><table><tr><th>Réf.</th><th>Description</th><th>Montant</th><th>Action</th></tr>${rows}</table></div>`;}
+  return html;
 }
+function decideFundBtn(id,decision,btn){btn.disabled=true;decideFunding(id,decision).then(()=>toast('Alimentation '+(decision==='approuve'?'autorisée':'refusée')+'.')).catch(e=>{toast('Erreur : '+e.message);btn.disabled=false;});}
 function viewReports(){
   const appr=CACHE.purchases.filter(p=>p.status==='approuve'); const total=appr.reduce((s,p)=>s+p.amount,0);
   const byCat={}; appr.forEach(p=>byCat[p.category||'divers']=(byCat[p.category||'divers']||0)+p.amount);
@@ -304,6 +328,15 @@ function viewAudit(){
   const rows=CACHE.audit.slice(0,60).map(a=>`<tr><td class="muted">${fmtTs(a.createdAt)}</td><td>${a.userName||userName(a.userUid)}</td><td><span class="badge b-blue">${a.action}</span></td><td>${a.entityId||''}</td><td>${a.amount?fmt(a.amount):''}</td></tr>`).join('')||emptyRow('Aucune action');
   return `<h1>Journal d'audit</h1><div class="sub">Traçabilité de toutes les actions</div><div class="card" style="overflow:auto;"><table><tr><th>Date</th><th>Utilisateur</th><th>Action</th><th>Objet</th><th>Montant</th></tr>${rows}</table></div>`;
 }
+function viewRegistrations(){
+  const pend=CACHE.users.filter(u=>u.status==='pending'||(!u.role&&u.actif===false));
+  const rows=pend.map(u=>`<tr><td>${((u.prenom||'')+' '+(u.nom||'')).trim()||'(sans nom)'}<div class="muted">${u.email||''} · ${u.provider||''}</div></td><td><button class="btn sm green" onclick="modalAuthorize('${u.id}')">Autoriser</button> <button class="btn sm red" onclick="refuseReg('${u.id}')">Refuser</button></td></tr>`).join('')||emptyRow('Aucune demande en attente',2);
+  return `<h1>Demandes d'inscription</h1><div class="sub">Autorisez les nouvelles inscriptions et attribuez un rôle</div><div class="note">Quand une personne s'inscrit (Google, Facebook ou email), elle apparaît ici en attente. Autorisez-la pour lui donner accès.</div><div class="card" style="overflow:auto;"><table><tr><th>Demandeur</th><th>Action</th></tr>${rows}</table></div>`;
+}
+function modalAuthorize(id){const u=CACHE.users.find(x=>x.id===id);if(!u)return;const opts=Object.entries(ALLPERMS).map(([k,v])=>`<label class="ck"><input type="checkbox" class="pck" value="${k}" ${k==='dashboard'?'checked':''}> ${v}</label>`).join('');openModal(`<h3>Autoriser ${u.email||''}</h3><div class="field"><label>Rôle</label><select id="aRole" onchange="presetPerms(this.value)"><option value="acheteur">Acheteur</option><option value="caissier">Caissier</option><option value="responsable">Responsable</option><option value="comptable">Comptable</option><option value="admin">Administrateur</option></select></div><label style="font-size:12px;color:var(--muted);font-weight:600;">Permissions</label><div style="margin:6px 0;">${opts}</div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn green" onclick="submitAuthorize('${id}',this)">Autoriser l'accès</button></div>`);presetPerms('acheteur');}
+async function submitAuthorize(id,btn){const role=document.getElementById('aRole').value;const perms=Array.from(document.querySelectorAll('.pck:checked')).map(c=>c.value);if(!perms.includes('dashboard'))perms.push('dashboard');btn.disabled=true;try{await db.collection('users').doc(id).set({role,perms,actif:true,status:'active'},{merge:true});const u=CACHE.users.find(x=>x.id===id);if(u&&u.uid&&role!=='comptable')db.collection('cashboxes').doc('box_'+u.uid).set({type:'user',ownerUid:u.uid,balance:firebase.firestore.FieldValue.increment(0),currency:'DT'},{merge:true});audit('AUTORISER_INSCRIPTION','user',(u&&u.email)||id);notify(id,'Accès autorisé','Votre compte a été autorisé. Actualisez l\'application.');closeModal();toast('Compte autorisé.');}catch(e){toast('Erreur : '+e.message);btn.disabled=false;}}
+async function refuseReg(id){try{await db.collection('users').doc(id).set({status:'refused',actif:false},{merge:true});audit('REFUSER_INSCRIPTION','user',id);notify(id,'Inscription refusée','Votre demande d\'accès a été refusée.');toast('Inscription refusée.');}catch(e){toast('Erreur : '+e.message);}}
+
 function viewProfile(){
   return `<h1>Profil</h1><div class="sub">${userName(ME.uid)} · ${roleLabel(ME.role)}</div><div class="card" style="max-width:520px;"><p style="margin-bottom:8px;"><b>Email :</b> ${ME.email}</p><p style="margin-bottom:8px;"><b>Rôle :</b> ${roleLabel(ME.role)}</p><div class="field"><label>Téléphone (pour la traçabilité des approbations)</label><input id="profPhone" value="${ME.phone||''}" placeholder="ex. 60 123 456"></div><div class="field"><label>Appareil</label><input id="profDevice" value="${ME.device||''}" placeholder="ex. Infinix Note 30"></div><button class="btn" onclick="saveProfile()">Enregistrer</button></div>`;
 }
@@ -322,7 +355,7 @@ function closeModal(){modalBg.classList.remove('show');}
 modalBg.addEventListener('click',e=>{if(e.target===modalBg)closeModal();});
 
 function modalFund(){const c={vente:'Vente',apport:'Apport',alimentation:'Alimentation'};openModal(`<h3>Alimenter la caisse générale</h3><div class="field"><label>Montant (DT)</label><input id="fAmt" type="number" placeholder="ex. 10000"></div><div class="field"><label>Source</label><select id="fCat">${Object.entries(c).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div><div class="field"><label>Note</label><input id="fNote"></div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn" onclick="submitFund(this)">Valider</button></div>`);}
-async function submitFund(btn){const a=parseDT(document.getElementById('fAmt').value);if(a<=0)return;btn.disabled=true;try{await fundCash(a,document.getElementById('fCat').value,document.getElementById('fNote').value);closeModal();toast('Caisse alimentée : '+fmt(a));}catch(e){toast('Erreur : '+e.message);btn.disabled=false;}}
+async function submitFund(btn){const a=parseDT(document.getElementById('fAmt').value);if(a<=0)return;btn.disabled=true;try{await fundCash(a,document.getElementById('fCat').value,document.getElementById('fNote').value);closeModal();toast('Demande d\'alimentation envoyée pour autorisation : '+fmt(a));}catch(e){toast('Erreur : '+e.message);btn.disabled=false;}}
 function modalAdvance(){const resp=CACHE.users.filter(u=>u.role==='acheteur'||u.perms&&u.perms.includes('purchase'));openModal(`<h3>Transférer une avance</h3><div class="field"><label>Bénéficiaire</label><select id="aTo">${resp.map(u=>`<option value="${u.uid}">${userName(u.uid)}</option>`).join('')||'<option value="">— aucun acheteur —</option>'}</select></div><div class="field"><label>Montant (DT)</label><input id="aAmt" type="number" placeholder="ex. 5000"></div><div class="field"><label>Note</label><input id="aNote"></div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn navy" onclick="submitAdvance(this)">Transférer</button></div>`);}
 async function submitAdvance(btn){const a=parseDT(document.getElementById('aAmt').value);const to=document.getElementById('aTo').value;if(a<=0||!to){toast('Renseignez bénéficiaire et montant.');return;}btn.disabled=true;try{await transferAdvance(to,a,document.getElementById('aNote').value);closeModal();toast('Avance transférée : '+fmt(a));}catch(e){toast('Erreur : '+e.message);btn.disabled=false;}}
 
