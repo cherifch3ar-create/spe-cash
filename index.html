@@ -38,7 +38,8 @@
   .layout{display:flex;} nav{width:225px;background:#fff;border-right:1px solid var(--line);min-height:calc(100vh - 58px);padding:14px 10px;flex-shrink:0;}
   nav a{display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:10px;color:var(--ink);text-decoration:none;font-size:14px;margin-bottom:3px;font-weight:500;}
   nav a:hover{background:var(--grey);} nav a.active{background:var(--blue-soft);color:var(--blue);font-weight:700;} nav a .ic{font-size:17px;width:20px;text-align:center;}
-  main{flex:1;padding:24px;max-width:1100px;} @media(max-width:760px){nav{display:none}main{padding:16px}}
+  main{flex:1;padding:24px;max-width:1100px;} .menuBtn{display:none;}
+  @media(max-width:760px){nav{display:none;position:fixed;top:58px;left:0;right:0;bottom:0;width:100%;z-index:30;overflow:auto;border-right:none;box-shadow:0 10px 24px rgba(0,0,0,.18);}nav.open{display:block;}main{padding:16px}.menuBtn{display:inline-flex;align-items:center;}}
   h1{font-size:23px;color:var(--navy);margin-bottom:3px;} .sub{color:var(--muted);font-size:14px;margin-bottom:18px;}
   .grid{display:grid;gap:14px;} .kpis{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));}
   .card{background:#fff;border-radius:16px;box-shadow:0 2px 10px rgba(14,42,71,.06);padding:18px;}
@@ -85,6 +86,7 @@
 
 <div id="app">
   <header>
+    <button class="menuBtn btn sm" onclick="toggleNav()" style="background:transparent;color:#fff;border:1px solid #34537f;font-size:18px;padding:5px 11px;">☰</button>
     <div class="logo">SPE</div>
     <div class="title">Money Cash Manager</div>
     <div class="spacer"></div>
@@ -119,6 +121,7 @@ try{ db.enablePersistence({synchronizeTabs:true}).catch(()=>{}); }catch(e){}
 
 const ADMIN_EMAIL = "cherifch3ar@gmail.com";
 const M = 1000;
+const APP_VERSION = '1.4';
 const ALLPERMS = {dashboard:'Voir le tableau de bord',approve:'Approuver les dépenses',fund:'Alimenter la caisse',advance:'Transférer des avances',purchase:'Déclarer des achats',users:'Gérer les utilisateurs',reports:'Rapports',audit:'Audit'};
 function defaultPerms(role){return role==='admin'?Object.keys(ALLPERMS):role==='caissier'?['dashboard','fund','advance']:role==='responsable'?['dashboard','approve','reports']:role==='comptable'?['dashboard','reports','audit']:['dashboard','purchase'];}
 
@@ -130,7 +133,7 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
 
 let ME=null;            // profil utilisateur courant (doc users)
 let CURRENT_VIEW='dashboard';
-let CACHE={users:[],cashboxes:{},purchases:[],notifs:[],audit:[],cashops:[],fundings:[],advReqs:[],messages:[]};
+let CACHE={users:[],cashboxes:{},purchases:[],notifs:[],audit:[],cashops:[],fundings:[],advReqs:[],messages:[],settings:{}};
 let UNSUB=[];
 
 function can(p){return !!(ME&&ME.perms&&ME.perms.includes(p));}
@@ -206,6 +209,7 @@ function startListeners(){
   UNSUB.push(db.collection('fundings').orderBy('createdAt','desc').limit(100).onSnapshot(s=>{CACHE.fundings=s.docs.map(d=>({id:d.id,...d.data()}));softRender();},()=>{}));
   UNSUB.push(db.collection('advanceRequests').orderBy('createdAt','desc').limit(100).onSnapshot(s=>{CACHE.advReqs=s.docs.map(d=>({id:d.id,...d.data()}));softRender();},()=>{}));
   UNSUB.push(db.collection('messages').orderBy('createdAt','desc').limit(300).onSnapshot(s=>{CACHE.messages=s.docs.map(d=>({id:d.id,...d.data()})).reverse();softRender();},()=>{}));
+  UNSUB.push(db.collection('settings').doc('app').onSnapshot(d=>{CACHE.settings=d.exists?d.data():{};softRender();},()=>{}));
   UNSUB.push(db.collection('notifications').where('userUid','==',auth.currentUser.uid).limit(50).onSnapshot(s=>{CACHE.notifs=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));renderBell();if(CURRENT_VIEW)softRender();},()=>{}));
   if(can('audit')) UNSUB.push(db.collection('auditLogs').orderBy('createdAt','desc').limit(100).onSnapshot(s=>{CACHE.audit=s.docs.map(d=>({id:d.id,...d.data()}));softRender();},()=>{}));
 }
@@ -288,13 +292,14 @@ async function decideAdvanceRequest(id,decision){
 }
 
 // ---------------- RENDU ----------------
-function navItems(){const it=[['dashboard','📊','Tableau de bord'],['purchases','🛍️','Achats']];if(can('fund')||can('advance'))it.push(['cash','💰','Caisse']);if(can('approve'))it.push(['validations','✅','Validations']);if(can('reports'))it.push(['reports','📈','Rapports']);if(can('users')){const np=CACHE.users.filter(u=>u.status==='pending'||(!u.role&&u.actif===false)).length;it.push(['registrations','📝','Inscriptions'+(np?' ('+np+')':'')]);it.push(['users','👥','Utilisateurs']);}if(can('audit'))it.push(['audit','🛡️','Audit']);it.push(['chat','💬','Messages'+(unreadChat()?(' ('+unreadChat()+')'):'')]);it.push(['profile','👤','Profil']);return it;}
-function go(v){CURRENT_VIEW=v;if(v==='chat'){try{localStorage.setItem('speChatSeen',Date.now());}catch(e){}}render();}
+function navItems(){const it=[['dashboard','📊','Tableau de bord'],['purchases','🛍️','Achats']];if(can('fund')||can('advance'))it.push(['cash','💰','Caisse']);if(can('approve'))it.push(['validations','✅','Validations']);if(can('reports'))it.push(['reports','📈','Rapports']);if(can('users')){const np=CACHE.users.filter(u=>u.status==='pending'||(!u.role&&u.actif===false)).length;it.push(['registrations','📝','Inscriptions'+(np?' ('+np+')':'')]);it.push(['users','👥','Utilisateurs']);it.push(['settings','⚙️','Paramètres']);}if(can('audit'))it.push(['audit','🛡️','Audit']);it.push(['chat','💬','Messages'+(unreadChat()?(' ('+unreadChat()+')'):'')]);it.push(['profile','👤','Profil']);return it;}
+function go(v){CURRENT_VIEW=v;if(v==='chat'){try{localStorage.setItem('speChatSeen',Date.now());}catch(e){}}const _n=document.getElementById('nav');if(_n)_n.classList.remove('open');render();}
+function toggleNav(){const n=document.getElementById('nav');if(n)n.classList.toggle('open');}
 function render(){
   if(!ME)return;
   const chip=document.getElementById('userChip'); chip.innerHTML=(ME.photoUrl?('<img src="'+ME.photoUrl+'">'):'')+((ME.prenom||'')+' · '+roleLabel(ME.role));
   document.getElementById('nav').innerHTML=navItems().map(([v,ic,l])=>`<a class="${v===CURRENT_VIEW?'active':''}" onclick="go('${v}')"><span class="ic">${ic}</span>${l}</a>`).join('');
-  document.getElementById('main').innerHTML=({dashboard:viewDashboard,purchases:viewPurchases,cash:viewCash,validations:viewValidations,reports:viewReports,users:viewUsers,audit:viewAudit,registrations:viewRegistrations,profile:viewProfile,chat:viewChat}[CURRENT_VIEW]||viewDashboard)();
+  document.getElementById('main').innerHTML=({dashboard:viewDashboard,purchases:viewPurchases,cash:viewCash,validations:viewValidations,reports:viewReports,users:viewUsers,audit:viewAudit,registrations:viewRegistrations,profile:viewProfile,chat:viewChat,settings:viewSettings}[CURRENT_VIEW]||viewDashboard)();
   renderBell();
   if(CURRENT_VIEW==='chat')setTimeout(scrollChat,20);
 }
@@ -373,10 +378,27 @@ async function submitAuthorize(id,btn){const role=document.getElementById('aRole
 async function refuseReg(id){try{await db.collection('users').doc(id).set({status:'refused',actif:false},{merge:true});audit('REFUSER_INSCRIPTION','user',id);notify(id,'Inscription refusée','Votre demande d\'accès a été refusée.');toast('Inscription refusée.');}catch(e){toast('Erreur : '+e.message);}}
 
 function viewProfile(){
-  return `<h1>Profil</h1><div class="sub">${userName(ME.uid)} · ${roleLabel(ME.role)}</div><div class="card" style="max-width:520px;"><p style="margin-bottom:8px;"><b>Email :</b> ${ME.email}</p><p style="margin-bottom:8px;"><b>Rôle :</b> ${roleLabel(ME.role)}</p><div class="field"><label>Téléphone (pour la traçabilité des approbations)</label><input id="profPhone" value="${ME.phone||''}" placeholder="ex. 60 123 456"></div><div class="field"><label>Appareil</label><input id="profDevice" value="${ME.device||''}" placeholder="ex. Infinix Note 30"></div><button class="btn" onclick="saveProfile()">Enregistrer</button></div>`;
+  return `<h1>Profil</h1><div class="sub">${userName(ME.uid)} · ${roleLabel(ME.role)}</div><div class="card" style="max-width:520px;"><p style="margin-bottom:8px;"><b>Email :</b> ${ME.email}</p><p style="margin-bottom:8px;"><b>Rôle :</b> ${roleLabel(ME.role)}</p><div class="field"><label>Téléphone (pour la traçabilité des approbations)</label><input id="profPhone" value="${ME.phone||''}" placeholder="ex. 60 123 456"></div><div class="field"><label>Appareil</label><input id="profDevice" value="${ME.device||''}" placeholder="ex. Infinix Note 30"></div><button class="btn" onclick="saveProfile()">Enregistrer</button> <button class="btn sec" onclick="forceUpdate()">🔄 Mettre à jour</button></div>`;
 }
 async function saveProfile(){ const phone=document.getElementById('profPhone').value.trim(); const device=document.getElementById('profDevice').value.trim(); await db.collection('users').doc(ME.uid).set({phone,device},{merge:true}); ME.phone=phone;ME.device=device; toast('Profil enregistré.'); }
 async function toggleActive(id,cur){ await db.collection('users').doc(id).set({actif:!cur},{merge:true}); toast('Statut mis à jour.'); }
+
+// ---------------- PARAMÈTRES ----------------
+function catList(){const d=['achat','carburant','fournisseur','maintenance','divers'];const c=(CACHE.settings&&CACHE.settings.purchaseCategories);return (Array.isArray(c)&&c.length)?c:d;}
+function viewSettings(){
+  const cats=catList();
+  const catRows=cats.map(c=>`<span class="badge b-blue" style="font-size:13px;padding:6px 12px;margin:4px;display:inline-flex;align-items:center;gap:7px;">${c} <span onclick="removeCategory('${c}')" style="cursor:pointer;font-weight:800;color:var(--red);">×</span></span>`).join('');
+  return `<h1>Paramètres</h1><div class="sub">Catégories, mise à jour et informations</div>`+
+  `<div class="sectitle" style="margin-top:0;">Catégories d'achat</div>`+
+  `<div class="card"><div style="margin-bottom:10px;">${catRows||'<span class="muted">Aucune catégorie</span>'}</div><div style="display:flex;gap:8px;"><input id="newCat" placeholder="Nouvelle catégorie (ex. Transport)" style="flex:1;padding:11px 12px;border:1px solid var(--line);border-radius:10px;"><button class="btn" onclick="addCategory()">Ajouter</button></div></div>`+
+  `<div class="sectitle">Mise à jour de l'application</div>`+
+  `<div class="card"><p class="muted" style="margin-bottom:10px;">Recharge la dernière version et vide le cache de l'appareil.</p><button class="btn" onclick="forceUpdate()">🔄 Mettre à jour maintenant</button></div>`+
+  `<div class="sectitle">À propos</div>`+
+  `<div class="card"><p class="muted">SPE Money Cash Manager · Version ${APP_VERSION} · Soft Power Elevation</p></div>`;
+}
+async function addCategory(){const v=(document.getElementById('newCat').value||'').trim().toLowerCase();if(!v)return;let cur=(CACHE.settings&&Array.isArray(CACHE.settings.purchaseCategories))?CACHE.settings.purchaseCategories.slice():catList().slice();if(!cur.includes(v))cur.push(v);try{await db.collection('settings').doc('app').set({purchaseCategories:cur},{merge:true});document.getElementById('newCat').value='';toast('Catégorie ajoutée.');}catch(e){toast('Erreur : '+e.message);}}
+async function removeCategory(c){let cur=(CACHE.settings&&Array.isArray(CACHE.settings.purchaseCategories))?CACHE.settings.purchaseCategories.slice():catList().slice();cur=cur.filter(x=>x!==c);try{await db.collection('settings').doc('app').set({purchaseCategories:cur},{merge:true});toast('Catégorie retirée.');}catch(e){toast('Erreur : '+e.message);}}
+async function forceUpdate(){try{if('serviceWorker' in navigator){const regs=await navigator.serviceWorker.getRegistrations();for(const r of regs){if(r.waiting)r.waiting.postMessage('skipWaiting');try{await r.update();}catch(e){}}}}catch(e){}try{if(window.caches){const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)));}}catch(e){}toast('Mise à jour… rechargement.');setTimeout(()=>location.reload(true),700);}
 
 // ---------------- MESSAGERIE (CHAT) ----------------
 let CHAT_PEER='all'; let chatDraft='';
@@ -411,7 +433,7 @@ function modalRequest(){openModal(`<h3>Demander une somme</h3><p class="muted" s
 async function submitRequest(btn){const a=parseDT(document.getElementById('rqAmt').value);if(a<=0){toast('Montant requis.');return;}btn.disabled=true;try{await requestAdvance(a,document.getElementById('rqNote').value.trim());closeModal();toast('Demande envoyée pour approbation : '+fmt(a));}catch(e){toast('Erreur : '+e.message);btn.disabled=false;}}
 
 let pendingPhoto=null;
-function modalNewPurchase(){pendingPhoto=null;const c={achat:'Achat',carburant:'Carburant',fournisseur:'Fournisseur',maintenance:'Maintenance',divers:'Divers'};openModal(`<h3>Déclarer un achat</h3><div class="field"><label>Fournisseur</label><input id="pSup" placeholder="ex. Métal Pro"></div><div class="field"><label>Montant (DT)</label><input id="pAmt" type="number" placeholder="ex. 1300"></div><div class="field"><label>Catégorie</label><select id="pCat">${Object.entries(c).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div><div class="field"><label>Description</label><input id="pDesc" placeholder="ex. Achat matériel"></div><label style="font-size:12px;color:var(--muted);font-weight:600;">Photo de facture (obligatoire) — PDF/JPG, scan auto</label><div class="filebox" id="fbPhoto"><span>📎</span><div style="flex:1">Facture / photo<div class="muted" id="fnPhoto">Aucun fichier</div></div><label class="btn sm sec" style="margin:0;">Choisir<input type="file" accept="image/jpeg,image/png,application/pdf" style="display:none" onchange="pickPhoto(this)"></label></div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn" onclick="submitPurchase(this)">Soumettre</button></div>`);}
+function modalNewPurchase(){pendingPhoto=null;const cats=catList();openModal(`<h3>Déclarer un achat</h3><div class="field"><label>Fournisseur</label><input id="pSup" placeholder="ex. Métal Pro"></div><div class="field"><label>Montant (DT)</label><input id="pAmt" type="number" placeholder="ex. 1300"></div><div class="field"><label>Catégorie</label><select id="pCat">${cats.map(k=>`<option value="${k}">${k.charAt(0).toUpperCase()+k.slice(1)}</option>`).join('')}</select></div><div class="field"><label>Description</label><input id="pDesc" placeholder="ex. Achat matériel"></div><label style="font-size:12px;color:var(--muted);font-weight:600;">Photo de facture (obligatoire) — PDF/JPG, scan auto</label><div class="filebox" id="fbPhoto"><span>📎</span><div style="flex:1">Facture / photo<div class="muted" id="fnPhoto">Aucun fichier</div></div><label class="btn sm sec" style="margin:0;">Choisir<input type="file" accept="image/jpeg,image/png,application/pdf" style="display:none" onchange="pickPhoto(this)"></label></div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn" onclick="submitPurchase(this)">Soumettre</button></div>`);}
 function pickPhoto(input){const f=input.files[0];if(!f)return;if(f.type==='application/pdf'){pendingPhoto={name:f.name,type:'pdf',data:null};document.getElementById('fnPhoto').textContent=f.name+' (PDF)';document.getElementById('fbPhoto').classList.add('ok');return;}const fr=new FileReader();fr.onload=e=>{const img=new Image();img.onload=()=>{const max=1000;let w=img.width,h=img.height;if(w>max){h=Math.round(h*max/w);w=max;}const cv=document.createElement('canvas');cv.width=w;cv.height=h;const x=cv.getContext('2d');x.filter='grayscale(0.2) contrast(1.25) brightness(1.05)';x.drawImage(img,0,0,w,h);pendingPhoto={name:f.name,type:'image',data:cv.toDataURL('image/jpeg',0.7)};document.getElementById('fnPhoto').textContent=f.name+' · scanné ✓';document.getElementById('fbPhoto').classList.add('ok');};img.src=e.target.result;};fr.readAsDataURL(f);}
 async function submitPurchase(btn){const amount=parseDT(document.getElementById('pAmt').value);const supplier=document.getElementById('pSup').value.trim();const description=document.getElementById('pDesc').value.trim();const category=document.getElementById('pCat').value;if(amount<=0||!description){toast('Renseignez montant et description.');return;}if(!pendingPhoto){toast('La photo de facture est obligatoire.');return;}btn.disabled=true;try{await createPurchase({amount,supplier,description,category,invoiceName:pendingPhoto.name,invoiceType:pendingPhoto.type,invoiceData:pendingPhoto.data||null});closeModal();toast('Achat déclaré · les responsables sont notifiés.');}catch(e){toast('Erreur : '+e.message);btn.disabled=false;}}
 function modalPurchase(id){const p=CACHE.purchases.find(x=>x.id===id);if(!p)return;const canApr=can('approve')&&p.status==='en_attente'&&p.buyerUid!==ME.uid;const img=p.invoiceData?`<img src="${p.invoiceData}" style="max-width:100%;border:1px solid var(--line);border-radius:10px;margin-top:8px;">`:(p.invoiceName?`<div class="filebox ok"><span>📄</span><div>${p.invoiceName}</div></div>`:'<p class="muted">Aucune pièce</p>');openModal(`<h3>${p.ref}</h3><p><b>Description :</b> ${p.description||''}</p><p><b>Fournisseur :</b> ${p.supplier||''}</p><p><b>Montant :</b> ${fmt(p.amount)}</p><p><b>Acheteur :</b> ${userName(p.buyerUid)}</p><p><b>Statut :</b> ${statusBadge(p.status)}</p>${p.approverName?`<p><b>Décidé par :</b> ${p.approverName}</p>`:''}${p.motif?`<p><b>Motif :</b> ${p.motif}</p>`:''}${p.ip?`<p class="muted">IP ${p.ip} · ${p.deviceInfo||''} · tél ${p.phone||'—'} ${p.geo?('· GPS '+p.geo.lat+','+p.geo.lng):''}</p>`:''}<div class="sectitle">Facture</div>${img}${p.signature?`<div class="sectitle">Signature</div><img src="${p.signature}" style="max-width:200px;border:1px solid var(--line);border-radius:8px;">`:''}<div class="actions">${canApr?`<button class="btn green" onclick="closeModal();modalApprove('${p.id}')">Approuver &amp; signer</button><button class="btn red" onclick="closeModal();modalReject('${p.id}')">Refuser</button>`:''}<button class="btn sec" onclick="closeModal()">Fermer</button></div>`);}
