@@ -79,7 +79,7 @@
     <div class="field" style="text-align:left;margin:8px 0;"><input id="authEmail" type="email" placeholder="Email"></div>
     <div class="field" style="text-align:left;margin:8px 0;"><input id="authPwd" type="password" placeholder="Mot de passe (min. 6)"></div>
     <div style="display:flex;gap:8px;"><button class="btn" style="flex:1;" onclick="emailLogin()">Se connecter</button><button class="btn sec" style="flex:1;" onclick="emailRegister()">S'inscrire</button></div>
-    <p class="muted" style="margin-top:14px;font-size:12px;">Après inscription, l'administrateur doit autoriser votre accès.</p>
+    <p class="muted" style="margin-top:14px;font-size:12px;">Inscription immédiate. L'administrateur pourra ajuster votre rôle et vos accès.</p>
   </div>
 </div>
 
@@ -177,13 +177,13 @@ auth.onAuthStateChanged(async (user)=>{
     }
     if(!prof){
       const prov=(user.providerData[0]&&user.providerData[0].providerId)||'email';
-      const pend={uid:user.uid,prenom:(user.displayName||'').split(' ')[0]||'',nom:(user.displayName||'').split(' ').slice(1).join(' '),email:email,role:'',perms:['dashboard'],status:'pending',actif:false,provider:prov,photoUrl:user.photoURL||null,createdAt:firebase.firestore.FieldValue.serverTimestamp()};
-      await db.collection('users').doc(user.uid).set(pend,{merge:true});
-      try{ const admins=await db.collection('users').where('role','==','admin').get(); admins.forEach(a=>notify(a.id,'Nouvelle inscription',email+' demande l\'accès.')); }catch(e){}
-      showPending(email); return;
+      const np={uid:user.uid,prenom:(user.displayName||'').split(' ')[0]||(email.split('@')[0]),nom:(user.displayName||'').split(' ').slice(1).join(' '),email:email,role:'acheteur',perms:['dashboard','purchase'],status:'active',actif:true,provider:prov,photoUrl:user.photoURL||null,createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+      await db.collection('users').doc(user.uid).set(np,{merge:true});
+      try{ const admins=await db.collection('users').where('role','==','admin').get(); admins.forEach(a=>notify(a.id,'Nouvel inscrit',email+' a rejoint (rôle : acheteur).')); }catch(e){}
+      prof={id:user.uid,...np};
     }
     if(prof.status==='refused'){ showRefused(prof.email||email); return; }
-    if(prof.status==='pending'||!prof.role){ showPending(prof.email||email); return; }
+    if(!prof.role){ await db.collection('users').doc(prof.id||user.uid).set({role:'acheteur',perms:['dashboard','purchase'],status:'active',actif:true},{merge:true}); prof.role='acheteur'; prof.perms=['dashboard','purchase']; prof.actif=true; prof.status='active'; }
     if(prof.actif===false){ toast('Compte désactivé.'); logout(); return; }
     ME=prof;
     // s'assurer que la caisse user existe
