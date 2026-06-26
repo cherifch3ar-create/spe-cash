@@ -62,6 +62,8 @@
   .muted{color:var(--muted);font-size:13px;}
   .note{background:var(--blue-soft);border:1px solid #C6D6EF;border-radius:10px;padding:11px 14px;font-size:13px;margin-bottom:14px;} .note.warn{background:#FAEEDA;border-color:#EAD4A3;}
   #updateBar{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--navy);color:#fff;padding:12px 16px;display:none;align-items:center;justify-content:center;gap:14px;z-index:120;font-size:14px;}
+  #chatFab{position:fixed;right:18px;bottom:18px;width:58px;height:58px;border-radius:50%;background:var(--blue);color:#fff;border:none;display:none;align-items:center;justify-content:center;font-size:25px;box-shadow:0 6px 18px rgba(14,42,71,.3);z-index:40;}
+  #chatFab .fabdot{position:absolute;top:-3px;right:-3px;background:var(--red);color:#fff;border-radius:11px;min-width:21px;height:21px;font-size:11px;display:none;align-items:center;justify-content:center;padding:0 5px;font-weight:700;border:2px solid #fff;}
   #splash{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--grey);z-index:200;color:var(--muted);}
 </style>
 </head>
@@ -90,12 +92,14 @@
     <div class="logo">SPE</div>
     <div class="title">Money Cash Manager</div>
     <div class="spacer"></div>
+    <button class="btn sm" id="installBtn" onclick="installApp()" style="display:none;background:#fff;color:var(--navy);border:none;">⬇ Installer</button>
     <button class="bell" id="bell" onclick="openNotifs()">🔔<span class="dot"></span></button>
     <button class="btn sm" onclick="modalGuide()" style="background:transparent;color:#fff;border:1px solid #34537f;">❓ Aide</button>
     <span class="chip" id="userChip"></span>
     <button class="btn sm" onclick="logout()" style="background:transparent;color:#fff;border:1px solid #34537f;">Déconnexion</button>
   </header>
   <div class="layout"><nav id="nav"></nav><main id="main"></main></div>
+  <button id="chatFab" onclick="go('chat')" aria-label="Messages">💬<span class="fabdot" id="fabDot"></span></button>
 </div>
 
 <div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
@@ -415,7 +419,7 @@ function scrollChat(){const sc=document.getElementById('chatScroll');if(sc)sc.sc
 async function sendChat(){const txt=(chatDraft||'').trim();if(!txt)return;chatDraft='';const to=CHAT_PEER;try{await db.collection('messages').add({text:txt,from:ME.uid,fromName:userName(ME.uid),to,createdAt:firebase.firestore.FieldValue.serverTimestamp()});if(to!=='all')notify(to,'Nouveau message',userName(ME.uid)+' : '+txt.slice(0,60));}catch(e){toast('Erreur : '+e.message);}}
 
 // ---------------- NOTIFICATIONS ----------------
-function renderBell(){const b=document.getElementById('bell');if(!b||!ME)return;b.style.display=can('approve')?'inline-flex':'none';const c=CACHE.notifs.filter(n=>!n.read).length;const d=b.querySelector('.dot');d.textContent=c;d.style.display=c>0?'flex':'none';}
+function renderBell(){const b=document.getElementById('bell');if(!b||!ME)return;b.style.display='inline-flex';const c=CACHE.notifs.filter(n=>!n.read).length;const d=b.querySelector('.dot');d.textContent=c;d.style.display=c>0?'flex':'none';const fab=document.getElementById('chatFab');if(fab){fab.style.display='inline-flex';const u=unreadChat();const fd=document.getElementById('fabDot');if(fd){fd.textContent=u;fd.style.display=u>0?'flex':'none';}}}
 function openNotifs(){const list=CACHE.notifs.map(n=>`<div class="filebox ${n.read?'':'ok'}" style="cursor:pointer" onclick="readNotif('${n.id}')"><span>🔔</span><div style="flex:1"><b>${n.title}</b><div class="muted">${n.body||''} · ${fmtTs(n.createdAt)}</div></div>${n.read?'':'<span class="badge b-red">nouveau</span>'}</div>`).join('')||'<p class="muted">Aucune notification</p>';openModal(`<h3>Notifications</h3>${list}<div class="actions"><button class="btn sec" onclick="closeModal()">Fermer</button></div>`);}
 function readNotif(id){db.collection('notifications').doc(id).set({read:true},{merge:true});closeModal();go('validations');}
 
@@ -456,7 +460,7 @@ function exportCSV(){const rows=[['Réf','Date','Acheteur','Description','Catég
 
 // ---------------- PWA ----------------
 let deferredPrompt=null;
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;});
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;const ib=document.getElementById('installBtn');if(ib)ib.style.display='inline-flex';});
 function installApp(){if(deferredPrompt){deferredPrompt.prompt();deferredPrompt=null;}else{toast('Menu du navigateur → Ajouter à l\'écran d\'accueil.');}}
 let waitingSW=null;
 function applyUpdate(){ if(waitingSW){waitingSW.postMessage('skipWaiting');} document.getElementById('updateBar').style.display='none'; setTimeout(()=>location.reload(),300); }

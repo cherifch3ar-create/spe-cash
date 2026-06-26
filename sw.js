@@ -1,4 +1,4 @@
-const CACHE = 'spe-money-v6';
+const CACHE = 'spe-money-v7';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', (e) => {
   self.skipWaiting();
