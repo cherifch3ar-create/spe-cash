@@ -130,7 +130,7 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
 
 let ME=null;            // profil utilisateur courant (doc users)
 let CURRENT_VIEW='dashboard';
-let CACHE={users:[],cashboxes:{},purchases:[],notifs:[],audit:[],cashops:[],fundings:[]};
+let CACHE={users:[],cashboxes:{},purchases:[],notifs:[],audit:[],cashops:[],fundings:[],advReqs:[]};
 let UNSUB=[];
 
 function can(p){return !!(ME&&ME.perms&&ME.perms.includes(p));}
@@ -204,6 +204,7 @@ function startListeners(){
   UNSUB.push(db.collection('purchases').orderBy('createdAt','desc').limit(200).onSnapshot(s=>{CACHE.purchases=s.docs.map(d=>({id:d.id,...d.data()}));softRender();},()=>{}));
   UNSUB.push(db.collection('cashOperations').orderBy('createdAt','desc').limit(100).onSnapshot(s=>{CACHE.cashops=s.docs.map(d=>({id:d.id,...d.data()}));softRender();},()=>{}));
   UNSUB.push(db.collection('fundings').orderBy('createdAt','desc').limit(100).onSnapshot(s=>{CACHE.fundings=s.docs.map(d=>({id:d.id,...d.data()}));softRender();},()=>{}));
+  UNSUB.push(db.collection('advanceRequests').orderBy('createdAt','desc').limit(100).onSnapshot(s=>{CACHE.advReqs=s.docs.map(d=>({id:d.id,...d.data()}));softRender();},()=>{}));
   UNSUB.push(db.collection('notifications').where('userUid','==',auth.currentUser.uid).limit(50).onSnapshot(s=>{CACHE.notifs=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));renderBell();if(CURRENT_VIEW)softRender();},()=>{}));
   if(can('audit')) UNSUB.push(db.collection('auditLogs').orderBy('createdAt','desc').limit(100).onSnapshot(s=>{CACHE.audit=s.docs.map(d=>({id:d.id,...d.data()}));softRender();},()=>{}));
 }
@@ -259,13 +260,30 @@ async function decidePurchase(id,decision,extra){
     const snap=await tx.get(pRef); if(!snap.exists)throw new Error('Achat introuvable'); const p=snap.data();
     if(p.status!=='en_attente')throw new Error('Achat déjà traité');
     if(p.buyerUid===auth.currentUser.uid)throw new Error('Séparation des tâches : vous ne pouvez pas valider votre propre achat');
-    if(decision==='approuve'){ const cbRef=db.collection('cashboxes').doc(p.cashboxId); const cb=await tx.get(cbRef); const b=(cb.data()?.balance)||0; if(b<p.amount)throw new Error('Solde insuffisant sur le compte de l\'acheteur'); tx.set(cbRef,{balance:b-p.amount},{merge:true}); }
+    if(decision==='approuve'){ const cbRef=db.collection('cashboxes').doc(p.cashboxId); const cb=await tx.get(cbRef); const b=(cb.data()?.balance)||0; tx.set(cbRef,{type:'user',ownerUid:p.buyerUid,balance:b-p.amount,currency:'DT'},{merge:true}); } /* dépassement autorisé : le solde peut devenir négatif */
     tx.update(pRef,{status:decision,approverUid:auth.currentUser.uid,approverName:((ME.prenom||'')+' '+(ME.nom||'')).trim(),decidedAt:firebase.firestore.FieldValue.serverTimestamp(),...extra});
     const ap=db.collection('approvals').doc(); tx.set(ap,{purchaseId:id,ref:p.ref,decision,approverUid:auth.currentUser.uid,...extra,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
   });
   const p=(await pRef.get()).data();
   audit(decision==='approuve'?'APPROUVER_ACHAT':'REFUSER_ACHAT','purchase',p.ref,p.amount);
   notify(p.buyerUid,'Achat '+(decision==='approuve'?'approuvé':'refusé'),p.ref+(decision==='refuse'?(' · motif : '+(extra.motif||'')):''));
+}
+
+// ---------------- DEMANDE DE SOMME ----------------
+async function requestAdvance(amount,note){
+  await db.collection('advanceRequests').add({amount,note:note||null,requestedBy:auth.currentUser.uid,status:'en_attente',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  audit('DEMANDE_SOMME','advance','',amount);
+  CACHE.users.filter(u=>u.perms&&u.perms.includes('approve')&&u.actif!==false).forEach(u=>notify(u.uid||u.id,'Demande de somme',userName(auth.currentUser.uid)+' demande '+fmt(amount)+(note?(' · '+note):'')));
+}
+async function decideAdvanceRequest(id,decision){
+  const rRef=db.collection('advanceRequests').doc(id);
+  const snap=await rRef.get(); if(!snap.exists)throw new Error('Demande introuvable'); const r=snap.data();
+  if(r.status!=='en_attente')throw new Error('Demande déjà traitée');
+  if(r.requestedBy===auth.currentUser.uid)throw new Error('Séparation des tâches : vous ne pouvez pas autoriser votre propre demande');
+  if(decision==='approuve'){ await transferAdvance(r.requestedBy,r.amount,'Demande approuvée'+(r.note?(' · '+r.note):'')); }
+  await rRef.set({status:decision,approverUid:auth.currentUser.uid,approverName:((ME.prenom||'')+' '+(ME.nom||'')).trim(),decidedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+  audit(decision==='approuve'?'APPROUVER_SOMME':'REFUSER_SOMME','advance',id,r.amount);
+  notify(r.requestedBy,'Demande de somme '+(decision==='approuve'?'approuvée':'refusée'),fmt(r.amount));
 }
 
 // ---------------- RENDU ----------------
@@ -290,18 +308,22 @@ function viewDashboard(){
   const monExp=appr.filter(p=>p.decidedAt&&p.decidedAt.toDate&&p.decidedAt.toDate().getMonth()===now().getMonth()).reduce((s,p)=>s+p.amount,0);
   const pending=CACHE.purchases.filter(p=>p.status==='en_attente').length;
   const P=priv(); const kpis=[];
-  if(P)kpis.push(kpi('🏦','Caisse générale',fmt(bal('general')),'var(--navy)')); else kpis.push(kpi('👛','Mon solde',fmt(bal('box_'+ME.uid)),'var(--blue)'));
+  if(P)kpis.push(kpi('🏦','Caisse générale',fmt(bal('general')),'var(--navy)')); else {const mb=bal('box_'+ME.uid);kpis.push(kpi('👛','Mon solde',fmt(mb),mb<0?'var(--red)':'var(--blue)'));}
   kpis.push(kpi('📅','Dépenses du jour',fmt(dayExp),'var(--amber)'));
   kpis.push(kpi('🗓️','Dépenses du mois',fmt(monExp),'var(--green)'));
   kpis.push(kpi('⏳','En attente',pending,'var(--red)'));
   let usersTable='';
-  if(P){ const rows=CACHE.users.filter(u=>u.role!=='comptable').map(u=>{const b=bal('box_'+u.uid);return `<tr><td>${userName(u.uid)} <span class="muted">(${roleLabel(u.role)})</span></td><td style="text-align:right;font-weight:700;">${fmt(b)}</td></tr>`;}).join('')||emptyRow('Aucun utilisateur',2);
+  if(P){ const rows=CACHE.users.filter(u=>u.role!=='comptable').map(u=>{const b=bal('box_'+u.uid);return `<tr><td>${userName(u.uid)} <span class="muted">(${roleLabel(u.role)})</span></td><td style="text-align:right;font-weight:700;color:${b<0?'var(--red)':'inherit'};">${fmt(b)}</td></tr>`;}).join('')||emptyRow('Aucun utilisateur',2);
     usersTable=`<div class="sectitle">Soldes par utilisateur</div><div class="card"><table><tr><th>Utilisateur</th><th style="text-align:right;">Solde</th></tr>${rows}</table></div>`; }
   else { usersTable=`<div class="sectitle">Ma situation</div><div class="card"><table><tr><td>Mon solde</td><td style="text-align:right;font-weight:700;">${fmt(bal('box_'+ME.uid))}</td></tr></table></div>`; }
   const list=(P?CACHE.purchases:CACHE.purchases.filter(p=>p.buyerUid===ME.uid)).slice(0,6);
   const recent=list.map(p=>`<tr><td><b>${p.ref}</b></td><td>${p.description||''}</td><td>${userName(p.buyerUid)}</td><td style="font-weight:700;">${fmt(p.amount)}</td><td>${statusBadge(p.status)}</td></tr>`).join('')||emptyRow('Aucun achat');
-  return `<h1>Tableau de bord</h1><div class="sub">Vue d'ensemble · ${now().toLocaleDateString('fr-FR')} · temps réel</div><div class="grid kpis">${kpis.join('')}</div>${usersTable}<div class="sectitle">Derniers achats</div><div class="card"><table><tr><th>Réf.</th><th>Description</th><th>Acheteur</th><th>Montant</th><th>Statut</th></tr>${recent}</table></div>`;
+  const buyerTools=can('purchase')?`<div class="toolbar"><button class="btn" onclick="modalNewPurchase()">＋ Déclarer un achat</button><button class="btn navy" onclick="modalRequest()">💸 Demander une somme</button></div>`:'';
+  const chartCard=`<div class="sectitle">Courbe des dépenses (7 derniers jours)</div><div class="card">${barChart(last7DaysExpenses(P?null:ME.uid))}</div>`;
+  return `<h1>Tableau de bord</h1><div class="sub">Vue d'ensemble · ${now().toLocaleDateString('fr-FR')} · temps réel</div>${buyerTools}<div class="grid kpis">${kpis.join('')}</div>${chartCard}${usersTable}<div class="sectitle">Derniers achats</div><div class="card"><table><tr><th>Réf.</th><th>Description</th><th>Acheteur</th><th>Montant</th><th>Statut</th></tr>${recent}</table></div>`;
 }
+function barChart(points){const W=640,H=170,pad=26;const max=Math.max(1,...points.map(p=>Math.abs(p.value)));const bw=(W-pad*2)/points.length;const bars=points.map((p,i)=>{const h=Math.round((Math.abs(p.value)/max)*(H-pad*2));const x=pad+i*bw+bw*0.15;const y=H-pad-h;const col=p.value<0?'var(--red)':'var(--blue)';const val=p.value?fmt(p.value).replace(' DT',''):'';return `<rect x="${x}" y="${y}" width="${bw*0.7}" height="${Math.max(h,1)}" rx="4" fill="${col}"></rect><text x="${x+bw*0.35}" y="${y-4}" font-size="9" fill="#7A879B" text-anchor="middle">${val}</text><text x="${x+bw*0.35}" y="${H-pad+13}" font-size="9" fill="#7A879B" text-anchor="middle">${p.label}</text>`;}).join('');return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;"><line x1="${pad}" y1="${H-pad}" x2="${W-pad}" y2="${H-pad}" stroke="var(--line)"></line>${bars}</svg>`;}
+function last7DaysExpenses(buyerUid){const map={};const appr=CACHE.purchases.filter(p=>p.status==='approuve'&&(!buyerUid||p.buyerUid===buyerUid));appr.forEach(p=>{const d=p.decidedAt&&p.decidedAt.toDate?p.decidedAt.toDate():null;if(!d)return;const k=d.toISOString().slice(0,10);map[k]=(map[k]||0)+p.amount;});const days=[];for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const k=d.toISOString().slice(0,10);days.push({label:d.toLocaleDateString('fr-FR',{weekday:'short'}),value:map[k]||0});}return days;}
 function viewCash(){
   const ops=CACHE.cashops.slice(0,14).map(o=>`<tr><td>${o.type==='entree'?'⬇️ Entrée':(o.type==='avance'?'↔️ Avance → '+userName((o.to||'').replace('box_','')):'⬆️ Sortie')}</td><td>${o.category||''}</td><td>${o.note||''}</td><td style="text-align:right;font-weight:700;">${fmt(o.amount)}</td><td class="muted">${fmtTs(o.createdAt)}</td></tr>`).join('')||emptyRow('Aucun mouvement');
   const btns=`${can('fund')?'<button class="btn" onclick="modalFund()">＋ Alimenter la caisse</button>':''}${can('advance')?'<button class="btn navy" onclick="modalAdvance()">↔ Transférer une avance</button>':''}`;
@@ -315,13 +337,16 @@ function viewPurchases(){
 function viewValidations(){
   const pendP=CACHE.purchases.filter(p=>p.status==='en_attente');
   const pendF=CACHE.fundings.filter(f=>f.status==='en_attente');
-  if(!pendP.length&&!pendF.length)return `<h1>Validations</h1><div class="sub">À valider</div><div class="card" style="text-align:center;padding:34px;"><div style="font-size:34px;">✅</div><p class="muted" style="margin-top:8px;">Rien en attente.</p></div>`;
-  let html=`<h1>Validations</h1><div class="sub">${pendP.length+pendF.length} en attente</div><div class="note warn">On ne valide pas sa propre demande. À l'approbation d'un achat : IP, appareil, téléphone, localisation et signature sont enregistrés.</div>`;
+  const pendA=CACHE.advReqs.filter(r=>r.status==='en_attente');
+  if(!pendP.length&&!pendF.length&&!pendA.length)return `<h1>Validations</h1><div class="sub">À valider</div><div class="card" style="text-align:center;padding:34px;"><div style="font-size:34px;">✅</div><p class="muted" style="margin-top:8px;">Rien en attente.</p></div>`;
+  let html=`<h1>Validations</h1><div class="sub">${pendP.length+pendF.length+pendA.length} en attente</div><div class="note warn">On ne valide pas sa propre demande. À l'approbation d'un achat : IP, appareil, téléphone, localisation et signature sont enregistrés.</div>`;
+  if(pendA.length){const ar=pendA.map(r=>{const own=r.requestedBy===ME.uid;return `<tr><td>Demande de somme<div class="muted">par ${userName(r.requestedBy)}${r.note?(' · '+r.note):''}</div></td><td style="font-weight:700;">${fmt(r.amount)}</td><td>${own?'<span class="muted">Votre demande</span>':`<button class="btn sm green" onclick="decideAdvBtn('${r.id}','approuve',this)">Approuver</button> <button class="btn sm red" onclick="decideAdvBtn('${r.id}','refuse',this)">Refuser</button>`}</td></tr>`;}).join('');html+=`<div class="sectitle">Demandes de somme à approuver</div><div class="card"><table><tr><th>Objet</th><th>Montant</th><th>Action</th></tr>${ar}</table></div>`;}
   if(pendF.length){const fr=pendF.map(f=>{const own=f.requestedBy===ME.uid;return `<tr><td>Alimentation · ${f.category||''}<div class="muted">par ${userName(f.requestedBy)}${f.note?(' · '+f.note):''}</div></td><td style="font-weight:700;">${fmt(f.amount)}</td><td>${own?'<span class="muted">Votre demande</span>':`<button class="btn sm green" onclick="decideFundBtn('${f.id}','approuve',this)">Autoriser</button> <button class="btn sm red" onclick="decideFundBtn('${f.id}','refuse',this)">Refuser</button>`}</td></tr>`;}).join('');html+=`<div class="sectitle">Alimentations de caisse à autoriser</div><div class="card"><table><tr><th>Objet</th><th>Montant</th><th>Action</th></tr>${fr}</table></div>`;}
   if(pendP.length){const rows=pendP.map(p=>{const own=p.buyerUid===ME.uid;return `<tr><td><b>${p.ref}</b></td><td>${p.description||''}<div class="muted">${userName(p.buyerUid)}</div></td><td style="font-weight:700;">${fmt(p.amount)}</td><td><button class="btn sm sec" onclick="modalPurchase('${p.id}')">Voir</button> ${own?'<span class="muted">Votre demande</span>':`<button class="btn sm green" onclick="modalApprove('${p.id}')">Approuver</button> <button class="btn sm red" onclick="modalReject('${p.id}')">Refuser</button>`}</td></tr>`;}).join('');html+=`<div class="sectitle">Achats à valider</div><div class="card"><table><tr><th>Réf.</th><th>Description</th><th>Montant</th><th>Action</th></tr>${rows}</table></div>`;}
   return html;
 }
 function decideFundBtn(id,decision,btn){btn.disabled=true;decideFunding(id,decision).then(()=>toast('Alimentation '+(decision==='approuve'?'autorisée':'refusée')+'.')).catch(e=>{toast('Erreur : '+e.message);btn.disabled=false;});}
+function decideAdvBtn(id,decision,btn){btn.disabled=true;decideAdvanceRequest(id,decision).then(()=>toast('Demande '+(decision==='approuve'?'approuvée':'refusée')+'.')).catch(e=>{toast('Erreur : '+e.message);btn.disabled=false;});}
 function viewReports(){
   const appr=CACHE.purchases.filter(p=>p.status==='approuve'); const total=appr.reduce((s,p)=>s+p.amount,0);
   const byCat={}; appr.forEach(p=>byCat[p.category||'divers']=(byCat[p.category||'divers']||0)+p.amount);
@@ -366,6 +391,8 @@ function modalFund(){const c={vente:'Vente',apport:'Apport',alimentation:'Alimen
 async function submitFund(btn){const a=parseDT(document.getElementById('fAmt').value);if(a<=0)return;btn.disabled=true;try{await fundCash(a,document.getElementById('fCat').value,document.getElementById('fNote').value);closeModal();toast('Caisse alimentée : '+fmt(a));}catch(e){toast('Erreur : '+e.message);btn.disabled=false;}}
 function modalAdvance(){const resp=CACHE.users.filter(u=>u.role==='acheteur'||u.perms&&u.perms.includes('purchase'));openModal(`<h3>Transférer une avance</h3><div class="field"><label>Bénéficiaire</label><select id="aTo">${resp.map(u=>`<option value="${u.uid}">${userName(u.uid)}</option>`).join('')||'<option value="">— aucun acheteur —</option>'}</select></div><div class="field"><label>Montant (DT)</label><input id="aAmt" type="number" placeholder="ex. 5000"></div><div class="field"><label>Note</label><input id="aNote"></div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn navy" onclick="submitAdvance(this)">Transférer</button></div>`);}
 async function submitAdvance(btn){const a=parseDT(document.getElementById('aAmt').value);const to=document.getElementById('aTo').value;if(a<=0||!to){toast('Renseignez bénéficiaire et montant.');return;}btn.disabled=true;try{await transferAdvance(to,a,document.getElementById('aNote').value);closeModal();toast('Avance transférée : '+fmt(a));}catch(e){toast('Erreur : '+e.message);btn.disabled=false;}}
+function modalRequest(){openModal(`<h3>Demander une somme</h3><p class="muted" style="margin-bottom:6px;">Votre demande est envoyée à l'administration pour approbation. À l'accord, le montant est crédité sur votre solde.</p><div class="field"><label>Montant (DT)</label><input id="rqAmt" type="number" placeholder="ex. 500"></div><div class="field"><label>Motif</label><input id="rqNote" placeholder="ex. achat fournitures"></div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn" onclick="submitRequest(this)">Envoyer la demande</button></div>`);}
+async function submitRequest(btn){const a=parseDT(document.getElementById('rqAmt').value);if(a<=0){toast('Montant requis.');return;}btn.disabled=true;try{await requestAdvance(a,document.getElementById('rqNote').value.trim());closeModal();toast('Demande envoyée pour approbation : '+fmt(a));}catch(e){toast('Erreur : '+e.message);btn.disabled=false;}}
 
 let pendingPhoto=null;
 function modalNewPurchase(){pendingPhoto=null;const c={achat:'Achat',carburant:'Carburant',fournisseur:'Fournisseur',maintenance:'Maintenance',divers:'Divers'};openModal(`<h3>Déclarer un achat</h3><div class="field"><label>Fournisseur</label><input id="pSup" placeholder="ex. Métal Pro"></div><div class="field"><label>Montant (DT)</label><input id="pAmt" type="number" placeholder="ex. 1300"></div><div class="field"><label>Catégorie</label><select id="pCat">${Object.entries(c).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div><div class="field"><label>Description</label><input id="pDesc" placeholder="ex. Achat matériel"></div><label style="font-size:12px;color:var(--muted);font-weight:600;">Photo de facture (obligatoire) — PDF/JPG, scan auto</label><div class="filebox" id="fbPhoto"><span>📎</span><div style="flex:1">Facture / photo<div class="muted" id="fnPhoto">Aucun fichier</div></div><label class="btn sm sec" style="margin:0;">Choisir<input type="file" accept="image/jpeg,image/png,application/pdf" style="display:none" onchange="pickPhoto(this)"></label></div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn" onclick="submitPurchase(this)">Soumettre</button></div>`);}
