@@ -65,6 +65,8 @@
   #chatFab{position:fixed;right:18px;bottom:18px;width:58px;height:58px;border-radius:50%;background:var(--blue);color:#fff;border:none;display:none;align-items:center;justify-content:center;font-size:25px;box-shadow:0 6px 18px rgba(14,42,71,.3);z-index:40;}
   #chatFab .fabdot{position:absolute;top:-3px;right:-3px;background:var(--red);color:#fff;border-radius:11px;min-width:21px;height:21px;font-size:11px;display:none;align-items:center;justify-content:center;padding:0 5px;font-weight:700;border:2px solid #fff;}
   #splash{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--grey);z-index:200;color:var(--muted);}
+  @media(max-width:760px){ header .chip{display:none;} header .title{font-size:13px;} header .btn.sm{padding:6px 9px;font-size:12px;} main .card{overflow-x:auto;} table{font-size:12.5px;} h1{font-size:20px;} }
+  @media print{ header,#nav,#chatFab,#updateBar,.toast,#installBtn,.bell,.menuBtn,.toolbar{display:none!important;} body{background:#fff;} #app{display:block!important;} .layout{display:block;} main{padding:0;max-width:100%;} .card{box-shadow:none;border:1px solid #bbb;break-inside:avoid;} h1{color:#000;} @page{size:A4;margin:14mm;} }
 </style>
 </head>
 <body>
@@ -214,7 +216,7 @@ function startListeners(){
   UNSUB.push(db.collection('advanceRequests').orderBy('createdAt','desc').limit(100).onSnapshot(s=>{CACHE.advReqs=s.docs.map(d=>({id:d.id,...d.data()}));softRender();},()=>{}));
   UNSUB.push(db.collection('messages').orderBy('createdAt','desc').limit(300).onSnapshot(s=>{CACHE.messages=s.docs.map(d=>({id:d.id,...d.data()})).reverse();softRender();},()=>{}));
   UNSUB.push(db.collection('settings').doc('app').onSnapshot(d=>{CACHE.settings=d.exists?d.data():{};softRender();},()=>{}));
-  UNSUB.push(db.collection('notifications').where('userUid','==',auth.currentUser.uid).limit(50).onSnapshot(s=>{CACHE.notifs=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));renderBell();if(CURRENT_VIEW)softRender();},()=>{}));
+  UNSUB.push(db.collection('notifications').where('userUid','==',auth.currentUser.uid).limit(50).onSnapshot(s=>{CACHE.notifs=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));if(_notifInit){s.docChanges().forEach(ch=>{if(ch.type==='added'){const d=ch.doc.data();const ts=d.createdAt&&d.createdAt.toDate?d.createdAt.toDate().getTime():0;if(Date.now()-ts<120000)notifyNew(d);}});}_notifInit=true;renderBell();if(CURRENT_VIEW)softRender();},()=>{}));
   if(can('audit')) UNSUB.push(db.collection('auditLogs').orderBy('createdAt','desc').limit(100).onSnapshot(s=>{CACHE.audit=s.docs.map(d=>({id:d.id,...d.data()}));softRender();},()=>{}));
 }
 let _rt=null; function softRender(){ clearTimeout(_rt); _rt=setTimeout(()=>{ if(ME)render(); },120); }
@@ -382,7 +384,7 @@ async function submitAuthorize(id,btn){const role=document.getElementById('aRole
 async function refuseReg(id){try{await db.collection('users').doc(id).set({status:'refused',actif:false},{merge:true});audit('REFUSER_INSCRIPTION','user',id);notify(id,'Inscription refusée','Votre demande d\'accès a été refusée.');toast('Inscription refusée.');}catch(e){toast('Erreur : '+e.message);}}
 
 function viewProfile(){
-  return `<h1>Profil</h1><div class="sub">${userName(ME.uid)} · ${roleLabel(ME.role)}</div><div class="card" style="max-width:520px;"><p style="margin-bottom:8px;"><b>Email :</b> ${ME.email}</p><p style="margin-bottom:8px;"><b>Rôle :</b> ${roleLabel(ME.role)}</p><div class="field"><label>Téléphone (pour la traçabilité des approbations)</label><input id="profPhone" value="${ME.phone||''}" placeholder="ex. 60 123 456"></div><div class="field"><label>Appareil</label><input id="profDevice" value="${ME.device||''}" placeholder="ex. Infinix Note 30"></div><button class="btn" onclick="saveProfile()">Enregistrer</button> <button class="btn sec" onclick="forceUpdate()">🔄 Mettre à jour</button></div>`;
+  return `<h1>Profil</h1><div class="sub">${userName(ME.uid)} · ${roleLabel(ME.role)}</div><div class="card" style="max-width:520px;"><p style="margin-bottom:8px;"><b>Email :</b> ${ME.email}</p><p style="margin-bottom:8px;"><b>Rôle :</b> ${roleLabel(ME.role)}</p><div class="field"><label>Téléphone (pour la traçabilité des approbations)</label><input id="profPhone" value="${ME.phone||''}" placeholder="ex. 60 123 456"></div><div class="field"><label>Appareil</label><input id="profDevice" value="${ME.device||''}" placeholder="ex. Infinix Note 30"></div><button class="btn" onclick="saveProfile()">Enregistrer</button> <button class="btn sec" onclick="forceUpdate()">🔄 Mettre à jour</button></div><div class="sectitle">Notifications (son + alertes)</div><div class="card" style="max-width:520px;"><p class="muted" style="margin-bottom:10px;">Le son BIP et les alertes ne s'activent qu'avec <b>votre autorisation</b>. Rien n'est activé automatiquement.</p><button class="btn" onclick="requestNotifPermission()">🔔 Activer les notifications</button> <button class="btn sec" onclick="beep()">▶ Tester le BIP</button></div>`;
 }
 async function saveProfile(){ const phone=document.getElementById('profPhone').value.trim(); const device=document.getElementById('profDevice').value.trim(); await db.collection('users').doc(ME.uid).set({phone,device},{merge:true}); ME.phone=phone;ME.device=device; toast('Profil enregistré.'); }
 async function toggleActive(id,cur){ await db.collection('users').doc(id).set({actif:!cur},{merge:true}); toast('Statut mis à jour.'); }
@@ -417,6 +419,13 @@ function viewChat(){
 }
 function scrollChat(){const sc=document.getElementById('chatScroll');if(sc)sc.scrollTop=sc.scrollHeight;const inp=document.getElementById('chatInput');if(inp){inp.focus();try{inp.setSelectionRange(inp.value.length,inp.value.length);}catch(e){}}}
 async function sendChat(){const txt=(chatDraft||'').trim();if(!txt)return;chatDraft='';const to=CHAT_PEER;try{await db.collection('messages').add({text:txt,from:ME.uid,fromName:userName(ME.uid),to,createdAt:firebase.firestore.FieldValue.serverTimestamp()});if(to!=='all')notify(to,'Nouveau message',userName(ME.uid)+' : '+txt.slice(0,60));}catch(e){toast('Erreur : '+e.message);}}
+
+// ---------------- NOTIFICATIONS (SON + ALERTES) ----------------
+let _notifInit=false; let _ac=null;
+function beep(){try{_ac=_ac||new (window.AudioContext||window.webkitAudioContext)();if(_ac.state==='suspended')_ac.resume();const o=_ac.createOscillator(),g=_ac.createGain();o.type='sine';o.frequency.value=880;o.connect(g);g.connect(_ac.destination);const t=_ac.currentTime;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.3,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+0.35);o.start(t);o.stop(t+0.37);}catch(e){}}
+function notifyNew(n){beep();toast('🔔 '+((n&&n.title)||'Nouvelle notification')+((n&&n.body)?(' — '+n.body):''));if('Notification' in window && Notification.permission==='granted'){try{new Notification((n&&n.title)||'SPE Money Cash',{body:(n&&n.body)||'',icon:'icon-192.png'});}catch(e){}}}
+async function requestNotifPermission(){if(!('Notification' in window)){toast('Notifications non supportées sur cet appareil.');return;}try{const p=await Notification.requestPermission();if(p==='granted'){beep();toast('Notifications activées ✓');}else{toast('Vous avez refusé les notifications.');}}catch(e){toast('Erreur : '+e.message);}}
+document.addEventListener('click',()=>{if(_ac&&_ac.state==='suspended')_ac.resume();});
 
 // ---------------- NOTIFICATIONS ----------------
 function renderBell(){const b=document.getElementById('bell');if(!b||!ME)return;b.style.display='inline-flex';const c=CACHE.notifs.filter(n=>!n.read).length;const d=b.querySelector('.dot');d.textContent=c;d.style.display=c>0?'flex':'none';const fab=document.getElementById('chatFab');if(fab){fab.style.display='inline-flex';const u=unreadChat();const fd=document.getElementById('fabDot');if(fd){fd.textContent=u;fd.style.display=u>0?'flex':'none';}}}
