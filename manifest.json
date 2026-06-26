@@ -1,6 +1,6 @@
 {
-  "name": "SPE Cash Management",
-  "short_name": "SPE Cash",
+  "name": "SPE Money Cash Manager",
+  "short_name": "SPE Money",
   "description": "Gestion des espèces, avances, achats et validations — Soft Power Elevation.",
   "start_url": "./",
   "scope": "./",
