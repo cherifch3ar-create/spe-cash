@@ -221,9 +221,17 @@ function getGeo(){ return new Promise(res=>{ if(!navigator.geolocation)return re
 
 // ---------------- OPÉRATIONS ----------------
 async function fundCash(amount,category,note){
-  await db.collection('fundings').add({amount,category,note:note||null,requestedBy:auth.currentUser.uid,status:'en_attente',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-  audit('DEMANDE_ALIMENTATION','funding','',amount);
-  CACHE.users.filter(u=>u.perms&&u.perms.includes('approve')&&u.actif!==false).forEach(u=>notify(u.id,'Alimentation à autoriser',fmt(amount)+' · '+(category||'')+' · par '+userName(auth.currentUser.uid)));
+  const gRef=db.collection('cashboxes').doc('general');
+  const fRef=db.collection('fundings').doc();
+  await db.runTransaction(async tx=>{
+    const g=await tx.get(gRef); const b=(g.data()?.balance)||0;
+    tx.set(gRef,{type:'generale',balance:b+amount,currency:'DT'},{merge:true});
+    tx.set(fRef,{amount,category,note:note||null,requestedBy:auth.currentUser.uid,status:'approuve',approverUid:auth.currentUser.uid,approverName:((ME.prenom||'')+' '+(ME.nom||'')).trim(),createdAt:firebase.firestore.FieldValue.serverTimestamp(),decidedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    const op=db.collection('cashOperations').doc();
+    tx.set(op,{type:'entree',category:category,amount:amount,to:'general',by:auth.currentUser.uid,approvedBy:auth.currentUser.uid,note:note||null,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  });
+  audit('ALIMENTATION','funding',fRef.id,amount);
+  CACHE.users.filter(u=>u.perms&&u.perms.includes('approve')&&u.actif!==false&&u.id!==auth.currentUser.uid).forEach(u=>notify(u.id,'Caisse alimentée',fmt(amount)+' · '+(category||'')+' · par '+userName(auth.currentUser.uid)));
 }
 async function decideFunding(id,decision){
   const fRef=db.collection('fundings').doc(id);
@@ -355,7 +363,7 @@ function closeModal(){modalBg.classList.remove('show');}
 modalBg.addEventListener('click',e=>{if(e.target===modalBg)closeModal();});
 
 function modalFund(){const c={vente:'Vente',apport:'Apport',alimentation:'Alimentation'};openModal(`<h3>Alimenter la caisse générale</h3><div class="field"><label>Montant (DT)</label><input id="fAmt" type="number" placeholder="ex. 10000"></div><div class="field"><label>Source</label><select id="fCat">${Object.entries(c).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></div><div class="field"><label>Note</label><input id="fNote"></div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn" onclick="submitFund(this)">Valider</button></div>`);}
-async function submitFund(btn){const a=parseDT(document.getElementById('fAmt').value);if(a<=0)return;btn.disabled=true;try{await fundCash(a,document.getElementById('fCat').value,document.getElementById('fNote').value);closeModal();toast('Demande d\'alimentation envoyée pour autorisation : '+fmt(a));}catch(e){toast('Erreur : '+e.message);btn.disabled=false;}}
+async function submitFund(btn){const a=parseDT(document.getElementById('fAmt').value);if(a<=0)return;btn.disabled=true;try{await fundCash(a,document.getElementById('fCat').value,document.getElementById('fNote').value);closeModal();toast('Caisse alimentée : '+fmt(a));}catch(e){toast('Erreur : '+e.message);btn.disabled=false;}}
 function modalAdvance(){const resp=CACHE.users.filter(u=>u.role==='acheteur'||u.perms&&u.perms.includes('purchase'));openModal(`<h3>Transférer une avance</h3><div class="field"><label>Bénéficiaire</label><select id="aTo">${resp.map(u=>`<option value="${u.uid}">${userName(u.uid)}</option>`).join('')||'<option value="">— aucun acheteur —</option>'}</select></div><div class="field"><label>Montant (DT)</label><input id="aAmt" type="number" placeholder="ex. 5000"></div><div class="field"><label>Note</label><input id="aNote"></div><div class="actions"><button class="btn sec" onclick="closeModal()">Annuler</button><button class="btn navy" onclick="submitAdvance(this)">Transférer</button></div>`);}
 async function submitAdvance(btn){const a=parseDT(document.getElementById('aAmt').value);const to=document.getElementById('aTo').value;if(a<=0||!to){toast('Renseignez bénéficiaire et montant.');return;}btn.disabled=true;try{await transferAdvance(to,a,document.getElementById('aNote').value);closeModal();toast('Avance transférée : '+fmt(a));}catch(e){toast('Erreur : '+e.message);btn.disabled=false;}}
 
