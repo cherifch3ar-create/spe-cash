@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Soft Power Elevation</title>
+<meta name="theme-color" content="#1f5fbf">
+<style>
+  :root { --bg:#f5f6f8; --carte:#fff; --txt:#1c2330; --doux:#5d6778; --bord:#dfe3ea; --accent:#1f5fbf; --ok:#1d7a46; --err:#b3261e; --urg:#c0392b; --sem:#b9770e; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14171c; --carte:#1d2128; --txt:#e8ebf0; --doux:#9aa3b2; --bord:#2e343e; --accent:#6aa0ff; --ok:#5fc48c; --err:#ff8a80; --urg:#ff7b6b; --sem:#f0b44c; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font:15px/1.5 system-ui, "Segoe UI", Roboto, sans-serif; }
+  header { position:sticky; top:0; z-index:5; background:var(--accent); color:#fff; padding:10px 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  header b { font-size:17px; margin-right:auto; }
+  header button { background:rgba(255,255,255,.15); color:#fff; border:0; border-radius:16px; padding:6px 12px; font:inherit; font-size:14px; cursor:pointer; }
+  header button.actif { background:#fff; color:var(--accent); font-weight:600; }
+  main { max-width:980px; margin:0 auto; padding:16px; }
+  .cache { display:none !important; }
+  section.boite { background:var(--carte); border:1px solid var(--bord); border-radius:10px; padding:18px; margin-bottom:14px; }
+  .etroit { max-width:420px; margin:40px auto; }
+  h1 { font-size:20px; margin:0 0 6px; } h2 { font-size:16px; margin:0 0 10px; }
+  .sous { color:var(--doux); margin:0 0 14px; font-size:14px; }
+  label { display:block; font-weight:600; margin:10px 0 4px; font-size:14px; }
+  input, select, textarea { width:100%; padding:9px 10px; border:1px solid var(--bord); border-radius:7px; background:var(--bg); color:var(--txt); font:inherit; }
+  textarea { min-height:80px; }
+  button.p { margin-top:12px; padding:9px 14px; border-radius:7px; border:1px solid var(--accent); background:var(--accent); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
+  button.s { background:transparent; color:var(--accent); }
+  button:disabled { opacity:.5; cursor:default; }
+  .msg { margin-top:10px; font-weight:600; } .ok { color:var(--ok); } .err { color:var(--err); }
+  a { color:var(--accent); }
+  .filtres { display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:8px; margin-bottom:10px; }
+  @media (max-width:700px) { .filtres { grid-template-columns:1fr 1fr; } .filtres input { grid-column:1 / -1; } }
+  .chiffres { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin-bottom:12px; }
+  @media (max-width:600px) { .chiffres { grid-template-columns:repeat(2, 1fr); } }
+  .chiffre { background:var(--carte); border:1px solid var(--bord); border-radius:10px; padding:10px 12px; }
+  .chiffre b { display:block; font-size:22px; } .chiffre span { color:var(--doux); font-size:13px; }
+  .offre { background:var(--carte); border:1px solid var(--bord); border-left:4px solid var(--bord); border-radius:8px; padding:12px 14px; margin-bottom:8px; cursor:pointer; }
+  .offre.URGENT { border-left-color:var(--urg); } .offre.SEMAINE { border-left-color:var(--sem); }
+  .offre .t { font-weight:600; } .offre .m { color:var(--doux); font-size:13px; margin-top:4px; display:flex; gap:12px; flex-wrap:wrap; }
+  .pastille { display:inline-block; font-size:12px; padding:1px 8px; border-radius:10px; background:var(--bg); border:1px solid var(--bord); }
+  .pastille.URGENT { color:var(--urg); border-color:var(--urg); } .pastille.SEMAINE { color:var(--sem); border-color:var(--sem); }
+  dl { display:grid; grid-template-columns:max-content 1fr; gap:6px 14px; margin:0; } dt { color:var(--doux); } dd { margin:0; }
+  table { width:100%; border-collapse:collapse; } td, th { text-align:left; padding:8px 6px; border-bottom:1px solid var(--bord); vertical-align:middle; font-size:14px; }
+  td button { margin:0 4px 0 0; padding:4px 10px; font-size:13px; }
+  .vide { color:var(--doux); padding:20px; text-align:center; }
+</style>
+</head>
+<body>
+<header id="entete" class="cache">
+  <b>Soft Power Elevation</b>
+  <button data-vue="offres" class="actif">Offres</button>
+  <button data-vue="comptes" id="btn_comptes" class="cache">Comptes</button>
+  <button id="b_sortir">Sortir</button>
+</header>
+<main>
+  <!-- Connexion -->
+  <section id="v_cnx" class="boite etroit cache">
+    <h1>Soft Power Elevation</h1>
+    <p class="sous">Accès réservé, autorisé par Cherif Blidi.</p>
+    <div id="f_cnx">
+      <label for="c_mail">Adresse e-mail</label><input id="c_mail" type="email" autocomplete="username">
+      <label for="c_mdp">Mot de passe</label><input id="c_mdp" type="password" autocomplete="current-password">
+      <button class="p" id="b_cnx">Entrer</button>
+      <p class="sous" style="margin-top:12px">Pas encore de compte ? <a href="#" id="vers_insc">Demander un accès</a></p>
+    </div>
+    <div id="f_insc" class="cache">
+      <label for="i_nom">Nom et prénom</label><input id="i_nom" autocomplete="name">
+      <label for="i_mail">Adresse e-mail</label><input id="i_mail" type="email" autocomplete="username">
+      <label for="i_mdp">Mot de passe (8 caractères minimum)</label><input id="i_mdp" type="password" autocomplete="new-password">
+      <button class="p" id="b_insc">Demander l'accès</button>
+      <p class="sous" style="margin-top:12px"><a href="#" id="vers_cnx">J'ai déjà un compte</a></p>
+    </div>
+    <div id="m_cnx" class="msg"></div>
+  </section>
+
+  <!-- En attente -->
+  <section id="v_attente" class="boite etroit cache">
+    <h1>Demande envoyée</h1>
+    <p class="sous" id="t_attente">Votre accès attend l'autorisation de Cherif Blidi. Revenez une fois autorisé.</p>
+    <button class="p s" id="b_sortir2">Sortir</button>
+  </section>
+
+  <!-- Offres -->
+  <div id="v_offres" class="cache">
+    <div class="chiffres">
+      <div class="chiffre"><b id="n_total">–</b><span>offres en cours</span></div>
+      <div class="chiffre"><b id="n_urg">–</b><span>urgentes (moins de 48 h)</span></div>
+      <div class="chiffre"><b id="n_sem">–</b><span>cette semaine</span></div>
+      <div class="chiffre"><b id="n_cdc">–</b><span>cahier des charges disponible</span></div>
+    </div>
+    <div class="filtres">
+      <input id="f_texte" type="search" placeholder="Rechercher (objet, acheteur, N°)">
+      <select id="f_metier"><option value="">Tous les domaines</option></select>
+      <select id="f_gouv"><option value="">Tous les gouvernorats</option></select>
+      <select id="f_classe"><option value="">Toutes les échéances</option><option value="URGENT">Urgentes</option><option value="SEMAINE">Cette semaine</option><option value="PLUS_TARD">Plus tard</option><option value="expirees">Expirées</option></select>
+    </div>
+    <p class="sous" id="maj_info"></p>
+    <div id="liste"></div>
+  </div>
+
+  <!-- Détail -->
+  <div id="v_detail" class="cache">
+    <button class="p s" id="b_retour" style="margin:0 0 10px">← Retour aux offres</button>
+    <section class="boite">
+      <h1 id="d_objet"></h1>
+      <p class="sous" id="d_ar" dir="rtl"></p>
+      <dl id="d_infos"></dl>
+    </section>
+    <section class="boite">
+      <h2>Suivi</h2>
+      <label for="d_statut">Statut</label>
+      <select id="d_statut"><option value="">—</option><option>à étudier</option><option>en étude</option><option>à déposer</option><option>déposée</option><option>abandonnée</option></select>
+      <label for="d_note">Note</label><textarea id="d_note"></textarea>
+      <button class="p" id="b_sauver">Enregistrer</button><div id="m_detail" class="msg"></div>
+    </section>
+  </div>
+
+  <!-- Comptes (administrateur) -->
+  <section id="v_comptes" class="boite cache">
+    <h2>Comptes</h2>
+    <p class="sous">Autorisez ou bloquez chaque personne. Un compte bloqué perd l'accès tout de suite.</p>
+    <table><thead><tr><th>Nom</th><th>Rôle</th><th>Statut</th><th></th></tr></thead><tbody id="t_comptes"></tbody></table>
+    <div id="m_comptes" class="msg"></div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+"use strict";
+// Connexion publique au projet Supabase (clé publiable : les données restent protégées par les règles d'accès de la base).
+const URL_SB = "https://djvygsbdwcoyldujrezq.supabase.co";
+const CLE_PUB = "sb_publishable_c_LW07RXjWmU_KctUhrg6w_m8Kg6AJ8";
+const sb = supabase.createClient(URL_SB, CLE_PUB);
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const vues = ["v_cnx", "v_attente", "v_offres", "v_detail", "v_comptes"];
+function montrer(v) { vues.forEach((x) => $(x).classList.toggle("cache", x !== v)); $("entete").classList.toggle("cache", !["v_offres", "v_detail", "v_comptes"].includes(v)); window.scrollTo(0, 0); }
+function msg(id, t, ok) { $(id).textContent = t || ""; $(id).className = "msg " + (ok ? "ok" : "err"); }
+
+let profil = null, offres = [], courante = null;
+
+// ---------- échéances ----------
+function classe(o) {
+  if (!o.tri) return o.classe || "PLUS_TARD";
+  const h = (o.tri - Date.now()) / 3600000;
+  return h < 0 ? "expirees" : h < 48 ? "URGENT" : h < 168 ? "SEMAINE" : "PLUS_TARD";
+}
+const libelle = { URGENT: "Urgent", SEMAINE: "Cette semaine", PLUS_TARD: "Plus tard", expirees: "Expirée" };
+
+// ---------- connexion ----------
+$("vers_insc").onclick = (e) => { e.preventDefault(); $("f_cnx").classList.add("cache"); $("f_insc").classList.remove("cache"); msg("m_cnx", ""); };
+$("vers_cnx").onclick = (e) => { e.preventDefault(); $("f_insc").classList.add("cache"); $("f_cnx").classList.remove("cache"); msg("m_cnx", ""); };
+$("b_cnx").onclick = async () => {
+  $("b_cnx").disabled = true;
+  const { error } = await sb.auth.signInWithPassword({ email: $("c_mail").value.trim(), password: $("c_mdp").value });
+  $("b_cnx").disabled = false;
+  if (error) return msg("m_cnx", /confirm/i.test(error.message) ? "Confirmez d'abord votre adresse e-mail (lien reçu par e-mail)." : "E-mail ou mot de passe incorrect.");
+  demarrer();
+};
+$("b_insc").onclick = async () => {
+  const nom = $("i_nom").value.trim(), mail = $("i_mail").value.trim(), mdp = $("i_mdp").value;
+  if (!nom || !mail || mdp.length < 8) return msg("m_cnx", "Nom, e-mail et mot de passe de 8 caractères minimum.");
+  $("b_insc").disabled = true;
+  const { data, error } = await sb.auth.signUp({ email: mail, password: mdp, options: { data: { nom }, emailRedirectTo: location.href.split("#")[0] } });
+  $("b_insc").disabled = false;
+  if (error) return msg("m_cnx", error.message);
+  if (!data.session) return msg("m_cnx", "Demande enregistrée. Ouvrez le lien reçu par e-mail pour confirmer votre adresse, puis connectez-vous.", true);
+  demarrer();
+};
+async function sortir() { await sb.auth.signOut(); profil = null; montrer("v_cnx"); }
+$("b_sortir").onclick = sortir; $("b_sortir2").onclick = sortir;
+
+async function demarrer() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return montrer("v_cnx");
+  const { data, error } = await sb.from("profils").select("user_id, nom, role, statut").eq("user_id", session.user.id).maybeSingle();
+  if (error || !data) { montrer("v_attente"); $("t_attente").textContent = "Profil introuvable. Contactez Cherif Blidi."; return; }
+  profil = data;
+  if (profil.statut !== "autorise") {
+    montrer("v_attente");
+    $("t_attente").textContent = profil.statut === "bloque" ? "Votre accès a été bloqué par l'administrateur." : "Votre accès attend l'autorisation de Cherif Blidi. Revenez une fois autorisé.";
+    return;
+  }
+  $("btn_comptes").classList.toggle("cache", profil.role !== "admin");
+  montrer("v_offres");
+  chargerOffres();
+}
+
+// ---------- offres ----------
+async function chargerOffres() {
+  $("liste").innerHTML = '<p class="vide">Chargement…</p>';
+  const L = [];
+  for (let de = 0; de < 20000; de += 1000) {
+    const { data, error } = await sb.from("docs").select("id, data, maj").eq("collection", "offres").range(de, de + 999);
+    if (error) { $("liste").innerHTML = '<p class="vide err">' + esc(error.message) + "</p>"; return; }
+    L.push(...data);
+    if (data.length < 1000) break;
+  }
+  offres = L.map((x) => ({ ...x.data, _id: x.id, _maj: x.maj }));
+  const remplir = (sel, valeurs) => { const v = $(sel).value; $(sel).length = 1; [...new Set(valeurs.filter(Boolean))].sort((a, b) => a.localeCompare(b, "fr")).forEach((x) => $(sel).add(new Option(x, x))); $(sel).value = v; };
+  remplir("f_metier", offres.map((o) => o.metier));
+  remplir("f_gouv", offres.map((o) => o.gouvernorat));
+  const enCours = offres.filter((o) => classe(o) !== "expirees");
+  $("n_total").textContent = enCours.length;
+  $("n_urg").textContent = enCours.filter((o) => classe(o) === "URGENT").length;
+  $("n_sem").textContent = enCours.filter((o) => classe(o) === "SEMAINE").length;
+  $("n_cdc").textContent = enCours.filter((o) => o.cahier_dispo).length;
+  const derniere = Math.max(0, ...offres.map((o) => o._maj || 0));
+  $("maj_info").textContent = offres.length ? "Dernière mise à jour : " + new Date(derniere).toLocaleString("fr-FR") : "";
+  afficher();
+}
+function afficher() {
+  const t = $("f_texte").value.trim().toLowerCase(), m = $("f_metier").value, g = $("f_gouv").value, c = $("f_classe").value;
+  const L = offres.filter((o) => {
+    const k = classe(o);
+    if (c ? k !== c : k === "expirees") return false;
+    if (m && o.metier !== m) return false;
+    if (g && o.gouvernorat !== g) return false;
+    if (t && !(String(o.objet) + " " + o.objet_ar + " " + o.acheteur + " " + o.no).toLowerCase().includes(t)) return false;
+    return true;
+  }).sort((a, b) => (a.tri || 9e15) - (b.tri || 9e15));
+  if (!offres.length) { $("liste").innerHTML = '<p class="vide">Aucune offre en ligne pour le moment. Elles arrivent dès que le logiciel du PC se synchronise.</p>'; return; }
+  if (!L.length) { $("liste").innerHTML = '<p class="vide">Aucune offre ne correspond aux filtres.</p>'; return; }
+  $("liste").innerHTML = L.slice(0, 300).map((o) => {
+    const k = classe(o);
+    return `<div class="offre ${k}" data-id="${esc(o._id)}">
+      <div class="t">${esc(o.objet || o.objet_ar || o.no)}</div>
+      <div class="m"><span class="pastille ${k}">${esc(libelle[k])}</span><span>${esc(o.limite || "")}</span><span>${esc(o.gouvernorat || "")}</span><span>${esc(o.metier || "")}</span><span>${esc(o.acheteur || "")}</span>${o.cahier_dispo ? "<span>📄 cahier des charges</span>" : ""}${o.statut ? `<span>• ${esc(o.statut)}</span>` : ""}</div>
+    </div>`;
+  }).join("") + (L.length > 300 ? `<p class="vide">${L.length - 300} autres offres : affinez les filtres.</p>` : "");
+}
+["f_texte", "f_metier", "f_gouv", "f_classe"].forEach((id) => $(id).addEventListener("input", afficher));
+$("liste").onclick = (e) => { const d = e.target.closest(".offre"); if (d) ouvrir(d.dataset.id); };
+
+function ouvrir(id) {
+  courante = offres.find((o) => o._id === id);
+  if (!courante) return;
+  const o = courante, k = classe(o);
+  $("d_objet").textContent = o.objet || o.no;
+  $("d_ar").textContent = o.objet_ar && o.objet_ar !== o.objet ? o.objet_ar : "";
+  const lignes = [["N° TUNEPS", o.no], ["Acheteur", o.acheteur], ["Date limite", (o.limite || "") + " — " + libelle[k]], ["Gouvernorat", o.gouvernorat + (o.gouvernorat_source === "TUNEPS" ? " (officiel TUNEPS)" : "")],
+    ["Domaine SPE", o.metier], ["Catégorie TUNEPS", o.categorie_tuneps], ["Procédure", o.procedure], ["Documents", o.nb_documents != null ? o.nb_documents + (o.cahier_dispo ? " — cahier des charges disponible" : "") : ""], ["Publiée", o.publie]];
+  $("d_infos").innerHTML = lignes.filter(([, v]) => v).map(([a, v]) => `<dt>${esc(a)}</dt><dd>${esc(v)}</dd>`).join("") +
+    (/^https:\/\/www\.tuneps\.tn\//.test(o.lien || "") ? `<dt>TUNEPS</dt><dd><a href="${esc(o.lien)}" target="_blank" rel="noopener">Ouvrir l'offre sur TUNEPS</a></dd>` : "");
+  $("d_statut").value = o.statut && [...$("d_statut").options].some((x) => x.value === o.statut) ? o.statut : "";
+  $("d_note").value = o.note || "";
+  msg("m_detail", "");
+  montrer("v_detail");
+}
+$("b_retour").onclick = () => { montrer("v_offres"); afficher(); };
+$("b_sauver").onclick = async () => {
+  const o = courante; if (!o) return;
+  $("b_sauver").disabled = true;
+  const { data: actuel, error: e1 } = await sb.from("docs").select("data").eq("collection", "offres").eq("id", o._id).maybeSingle();
+  const nouveau = { ...(actuel?.data || {}), statut: $("d_statut").value, note: $("d_note").value, modifie_par: profil.nom || "site web", modifie_le: Date.now() };
+  const { error } = e1 ? { error: e1 } : await sb.from("docs").update({ data: nouveau }).eq("collection", "offres").eq("id", o._id);
+  $("b_sauver").disabled = false;
+  if (error) return msg("m_detail", "Échec : " + error.message);
+  Object.assign(o, nouveau);
+  msg("m_detail", "Enregistré. Le logiciel du PC le recevra à sa prochaine synchronisation.", true);
+};
+
+// ---------- comptes ----------
+async function chargerComptes() {
+  const { data, error } = await sb.from("profils").select("user_id, nom, role, statut, cree_le").order("cree_le");
+  if (error) return msg("m_comptes", error.message);
+  const nomStatut = { en_attente: "En attente", autorise: "Autorisé", bloque: "Bloqué" };
+  $("t_comptes").innerHTML = data.map((p) => `<tr><td>${esc(p.nom || "(sans nom)")}</td><td>${p.role === "admin" ? "Administrateur" : "Membre"}</td><td>${esc(nomStatut[p.statut])}</td><td>` +
+    (p.user_id === profil.user_id ? "<span class='sous'>vous</span>" :
+      (p.statut !== "autorise" ? `<button class="p" data-u="${esc(p.user_id)}" data-s="autorise">Autoriser</button>` : "") +
+      (p.statut !== "bloque" ? `<button class="p s" data-u="${esc(p.user_id)}" data-s="bloque">Bloquer</button>` : "")) + "</td></tr>").join("");
+}
+$("t_comptes").onclick = async (e) => {
+  const b = e.target.closest("button[data-u]"); if (!b) return;
+  const { error } = await sb.from("profils").update({ statut: b.dataset.s }).eq("user_id", b.dataset.u);
+  msg("m_comptes", error ? error.message : "Fait.", !error);
+  chargerComptes();
+};
+
+document.querySelectorAll("header button[data-vue]").forEach((b) => b.onclick = () => {
+  document.querySelectorAll("header button[data-vue]").forEach((x) => x.classList.toggle("actif", x === b));
+  if (b.dataset.vue === "comptes") { montrer("v_comptes"); chargerComptes(); } else { montrer("v_offres"); afficher(); }
+});
+sb.auth.onAuthStateChange((ev) => { if (ev === "SIGNED_OUT") montrer("v_cnx"); });
+demarrer();
+</script>
+</body>
+</html>
