@@ -49,6 +49,7 @@
 <header id="entete" class="cache">
   <b>Soft Power Elevation</b>
   <button data-vue="offres" class="actif">Offres</button>
+  <button data-vue="whatsapp">WhatsApp</button>
   <button data-vue="comptes" id="btn_comptes" class="cache">Comptes</button>
   <button id="b_sortir">Sortir</button>
 </header>
@@ -117,6 +118,24 @@
     </section>
   </div>
 
+  <!-- WhatsApp -->
+  <div id="v_whatsapp" class="cache">
+    <section class="boite">
+      <h2>Messages à traiter</h2>
+      <p class="sous">Messages que le robot n'a pas reconnus ou n'a pas pu traiter. Répondez depuis WhatsApp, puis cliquez sur « Traité ».</p>
+      <div id="wa_liste"></div>
+      <h2 style="margin-top:18px">Dernières réponses automatiques</h2>
+      <div id="wa_auto"></div>
+    </section>
+    <section class="boite">
+      <h2>Scénarios de réponse</h2>
+      <p class="sous">Chaque scénario répond quand un message contient l'un de ses mots. Écrivez {nom} pour le prénom du client. Un scénario d'un domaine précis passe avant un scénario « tous ».</p>
+      <div id="wa_scen"></div>
+      <button class="p s" id="wa_nouveau">+ Nouveau scénario</button>
+      <div id="m_wa" class="msg"></div>
+    </section>
+  </div>
+
   <!-- Comptes (administrateur) -->
   <section id="v_comptes" class="boite cache">
     <h2>Comptes</h2>
@@ -135,8 +154,8 @@ const CLE_PUB = "sb_publishable_c_LW07RXjWmU_KctUhrg6w_m8Kg6AJ8";
 const sb = supabase.createClient(URL_SB, CLE_PUB);
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const vues = ["v_cnx", "v_attente", "v_offres", "v_detail", "v_comptes"];
-function montrer(v) { vues.forEach((x) => $(x).classList.toggle("cache", x !== v)); $("entete").classList.toggle("cache", !["v_offres", "v_detail", "v_comptes"].includes(v)); window.scrollTo(0, 0); }
+const vues = ["v_cnx", "v_attente", "v_offres", "v_detail", "v_comptes", "v_whatsapp"];
+function montrer(v) { vues.forEach((x) => $(x).classList.toggle("cache", x !== v)); $("entete").classList.toggle("cache", !["v_offres", "v_detail", "v_comptes", "v_whatsapp"].includes(v)); window.scrollTo(0, 0); }
 function msg(id, t, ok) { $(id).textContent = t || ""; $(id).className = "msg " + (ok ? "ok" : "err"); }
 
 let profil = null, offres = [], courante = null;
@@ -285,8 +304,76 @@ $("t_comptes").onclick = async (e) => {
 
 document.querySelectorAll("header button[data-vue]").forEach((b) => b.onclick = () => {
   document.querySelectorAll("header button[data-vue]").forEach((x) => x.classList.toggle("actif", x === b));
-  if (b.dataset.vue === "comptes") { montrer("v_comptes"); chargerComptes(); } else { montrer("v_offres"); afficher(); }
+  if (b.dataset.vue === "comptes") { montrer("v_comptes"); chargerComptes(); }
+  else if (b.dataset.vue === "whatsapp") { montrer("v_whatsapp"); chargerWA(); } else { montrer("v_offres"); afficher(); }
 });
+// ---------- WhatsApp ----------
+const DOMAINES_WA = ["tous", "Ascenseurs", "Portail", "Surveillance, alarme, incendie", "Électrique", "Mécanique", "Métal construction"];
+let scenarios = [];
+const quand = (t) => t ? new Date(t).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "";
+async function chargerWA() {
+  const { data: msgs, error } = await sb.from("docs").select("id, data").eq("collection", "wa_messages").order("maj", { ascending: false }).limit(300);
+  if (error) return msg("m_wa", error.message);
+  const L = (msgs || []).map((x) => x.data);
+  const aTraiter = L.filter((m) => m.statut === "a_traiter");
+  $("wa_liste").innerHTML = aTraiter.length ? aTraiter.map((m) => `<div class="offre URGENT"><div class="t">${esc(m.nom || m.de)} — ${esc(m.texte || "(" + m.type + ")")}</div>
+    <div class="m"><span>${esc(quand(m.recu))}</span><span>${esc(m.raison || "")}</span><span>${esc(m.domaine || "")}</span>
+    <a href="https://wa.me/${esc(String(m.de).replace(/\D/g, ""))}" target="_blank" rel="noopener">Ouvrir dans WhatsApp</a>
+    <button class="p s" data-traite="${esc(m.id)}" style="margin:0;padding:2px 10px">Traité</button>
+    <button class="p s" data-humain="${esc(m.de)}" style="margin:0;padding:2px 10px">Je reprends la main (24 h)</button></div></div>`).join("")
+    : '<p class="vide">Aucun message en attente.</p>';
+  const auto = L.filter((m) => m.statut === "repondu").slice(0, 20);
+  $("wa_auto").innerHTML = auto.length ? auto.map((m) => `<div class="offre"><div class="t">${esc(m.nom || m.de)} — ${esc(m.texte)}</div>
+    <div class="m"><span>${esc(quand(m.recu))}</span><span>${esc(m.profil || "")}</span><span>${esc(m.scenario || "")}</span></div><div class="sous" style="margin:6px 0 0">${esc(m.reponse)}</div></div>`).join("")
+    : '<p class="vide">Pas encore de réponse automatique. Le robot démarre dès qu\'il est relié à WhatsApp Business.</p>';
+  const { data: sc } = await sb.from("docs").select("id, data").eq("collection", "wa_scenarios");
+  scenarios = (sc || []).map((x) => ({ ...x.data, id: x.id })).sort((a, b) => (b.priorite || 0) - (a.priorite || 0));
+  afficherScenarios();
+}
+function afficherScenarios() {
+  const admin = profil && profil.role === "admin";
+  $("wa_nouveau").classList.toggle("cache", !admin);
+  $("wa_scen").innerHTML = scenarios.map((s, i) => `<details class="offre" style="cursor:default"><summary class="t" style="cursor:pointer">${esc(s.titre || s.id)} ${s.actif === false ? "(désactivé)" : ""}
+    <span class="sous">— ${esc(s.domaine || "tous")} · ${esc(s.profil || "")}</span></summary>
+    <label>Titre</label><input data-i="${i}" data-c="titre" value="${esc(s.titre || "")}" ${admin ? "" : "disabled"}>
+    <label>Domaine</label><select data-i="${i}" data-c="domaine" ${admin ? "" : "disabled"}>${DOMAINES_WA.map((d) => `<option ${d === (s.domaine || "tous") ? "selected" : ""}>${esc(d)}</option>`).join("")}</select>
+    <label>Profil qui répond</label><input data-i="${i}" data-c="profil" value="${esc(s.profil || "")}" ${admin ? "" : "disabled"}>
+    <label>Mots qui déclenchent (séparés par des virgules ; français, arabe, tunisien)</label><textarea data-i="${i}" data-c="mots" ${admin ? "" : "disabled"}>${esc((s.mots || []).join(", "))}</textarea>
+    <label>Réponse</label><textarea data-i="${i}" data-c="reponse" style="min-height:110px" ${admin ? "" : "disabled"}>${esc(s.reponse || "")}</textarea>
+    <label>Priorité (0 à 10)</label><input type="number" min="0" max="10" data-i="${i}" data-c="priorite" value="${Number(s.priorite) || 0}" ${admin ? "" : "disabled"}>
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" style="width:auto" data-i="${i}" data-c="actif" ${s.actif === false ? "" : "checked"} ${admin ? "" : "disabled"}> Actif</label>
+    ${admin ? `<button class="p" data-sauver="${i}">Enregistrer ce scénario</button>` : ""}</details>`).join("");
+}
+$("wa_scen").onclick = async (e) => {
+  const b = e.target.closest("button[data-sauver]"); if (!b) return;
+  const i = Number(b.dataset.sauver), s = { ...scenarios[i] };
+  document.querySelectorAll(`[data-i="${i}"]`).forEach((el) => {
+    const c = el.dataset.c;
+    s[c] = c === "actif" ? el.checked : c === "mots" ? el.value.split(",").map((x) => x.trim()).filter(Boolean) : c === "priorite" ? Number(el.value) || 0 : el.value;
+  });
+  if (!s.titre || !s.reponse || !s.mots.length) return msg("m_wa", "Titre, mots et réponse sont obligatoires.");
+  const { error } = await sb.from("docs").upsert({ collection: "wa_scenarios", id: s.id, data: s });
+  msg("m_wa", error ? "Échec : " + error.message : "Scénario enregistré : le robot l'utilise dès le prochain message.", !error);
+  if (!error) { scenarios[i] = s; afficherScenarios(); }
+};
+$("wa_nouveau").onclick = () => {
+  scenarios.unshift({ id: "s" + Date.now(), titre: "Nouveau scénario", domaine: "tous", profil: "Sara – secrétaire", mots: [], reponse: "", priorite: 3, actif: true });
+  afficherScenarios(); document.querySelector("#wa_scen details").open = true;
+};
+$("wa_liste").onclick = async (e) => {
+  const t = e.target.closest("button[data-traite]"), h = e.target.closest("button[data-humain]");
+  if (t) {
+    const { data: d } = await sb.from("docs").select("data").eq("collection", "wa_messages").eq("id", t.dataset.traite).maybeSingle();
+    await sb.from("docs").update({ data: { ...(d?.data || {}), statut: "traite", traite_par: profil.nom || "" } }).eq("collection", "wa_messages").eq("id", t.dataset.traite);
+  }
+  if (h) {
+    const { data: d } = await sb.from("docs").select("data").eq("collection", "wa_contacts").eq("id", h.dataset.humain).maybeSingle();
+    await sb.from("docs").upsert({ collection: "wa_contacts", id: h.dataset.humain, data: { ...(d?.data || {}), humain_jusqu: Date.now() + 24 * 3600000 } });
+    msg("m_wa", "Le robot ne répondra plus à ce contact pendant 24 h.", true);
+  }
+  if (t || h) chargerWA();
+};
+
 sb.auth.onAuthStateChange((ev) => { if (ev === "SIGNED_OUT") montrer("v_cnx"); });
 demarrer();
 </script>
