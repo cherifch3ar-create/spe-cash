@@ -58,8 +58,8 @@
   <section id="v_cnx" class="boite etroit cache">
     <h1>Soft Power Elevation</h1>
     <p class="sous">Accès réservé, autorisé par Cherif Blidi.</p>
-    <button class="p" id="b_google" style="width:100%;margin:0 0 6px;background:#fff;color:#1c2330;border-color:var(--bord)">Continuer avec Google (Gmail)</button>
-    <p class="sous" style="text-align:center;margin:6px 0 0">ou avec une adresse e-mail</p>
+    <div id="bloc_google" class="cache"><button class="p" id="b_google" style="width:100%;margin:0 0 6px;background:#fff;color:#1c2330;border-color:var(--bord)">Continuer avec Google (Gmail)</button>
+    <p class="sous" style="text-align:center;margin:6px 0 0">ou avec une adresse e-mail</p></div>
     <div id="f_cnx">
       <label for="c_mail">Adresse e-mail</label><input id="c_mail" type="email" autocomplete="username">
       <label for="c_mdp">Mot de passe</label><input id="c_mdp" type="password" autocomplete="current-password">
@@ -375,6 +375,8 @@ $("wa_liste").onclick = async (e) => {
 };
 
 sb.auth.onAuthStateChange((ev) => { if (ev === "SIGNED_OUT") montrer("v_cnx"); });
+// Le bouton Google n'apparaît que si la connexion Google est activée dans Supabase.
+fetch(URL_SB + "/auth/v1/settings", { headers: { apikey: CLE_PUB } }).then((r) => r.json()).then((j) => { if (j && j.external && j.external.google) $("bloc_google").classList.remove("cache"); }).catch(() => {});
 demarrer();
 </script>
 </body>
