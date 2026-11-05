@@ -57,6 +57,8 @@
   <section id="v_cnx" class="boite etroit cache">
     <h1>Soft Power Elevation</h1>
     <p class="sous">Accès réservé, autorisé par Cherif Blidi.</p>
+    <button class="p" id="b_google" style="width:100%;margin:0 0 6px;background:#fff;color:#1c2330;border-color:var(--bord)">Continuer avec Google (Gmail)</button>
+    <p class="sous" style="text-align:center;margin:6px 0 0">ou avec une adresse e-mail</p>
     <div id="f_cnx">
       <label for="c_mail">Adresse e-mail</label><input id="c_mail" type="email" autocomplete="username">
       <label for="c_mdp">Mot de passe</label><input id="c_mdp" type="password" autocomplete="current-password">
@@ -166,6 +168,10 @@ $("b_insc").onclick = async () => {
   if (error) return msg("m_cnx", error.message);
   if (!data.session) return msg("m_cnx", "Demande enregistrée. Ouvrez le lien reçu par e-mail pour confirmer votre adresse, puis connectez-vous.", true);
   demarrer();
+};
+$("b_google").onclick = async () => {
+  const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.href.split("#")[0].split("?")[0] } });
+  if (error) msg("m_cnx", /provider is not enabled|Unsupported provider/i.test(error.message) ? "La connexion Google n'est pas encore activée par l'administrateur." : error.message);
 };
 async function sortir() { await sb.auth.signOut(); profil = null; montrer("v_cnx"); }
 $("b_sortir").onclick = sortir; $("b_sortir2").onclick = sortir;
