@@ -185,6 +185,10 @@ const libelle = { URGENT: "Urgent", SEMAINE: "Cette semaine", PLUS_TARD: "Plus t
 // ---------- images des domaines (images fixes du directeur, Supabase) ----------
 const IMG = "https://djvygsbdwcoyldujrezq.supabase.co/storage/v1/object/public/images-domaines/";
 function imageDomaine(o) {
+  // d'abord le domaine choisi par les agents (champ metier), ensuite les mots de l'objet
+  const m = (o.metier || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const parMetier = [[/ascenseur/, "ascenseurs"], [/portail/, "portails_automatiques"], [/surveillance|alarme|incendie/, "surveillance_alarme_incendie"], [/chaud|froid|climatis/, "mecanique"], [/variateur/, "variateurs_equipements_industriels"], [/blanchisserie/, "blanchisserie"], [/peinture/, "peinture"], [/maritime/, "maritime"], [/engin|levage|hydraul/, "levage_hydraulique"], [/metal/, "construction_metallique"], [/electri/, "electrique"], [/mecanique/, "mecanique"]];
+  for (const [re, f] of parMetier) if (re.test(m)) return IMG + "metier_" + f + ".jpg";
   const t = ((o.metier || "") + " " + (o.objet || "") + " " + (o.objet_ar || "")).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   const f = /ascenseur|monte-charge|مصاعد/.test(t) ? "ascenseurs" : /portail|barriere|porte automatique|rideau/.test(t) ? "portails_automatiques"
     : /surveil|camera|alarme|incendie|pointage|controle d.acces|video/.test(t) ? "surveillance_alarme_incendie"
