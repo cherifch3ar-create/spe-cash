@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Soft Power Elevation</title>
 <meta name="theme-color" content="#1f5fbf">
+<link rel="icon" href="icone.png">
 <style>
   :root { --bg:#f5f6f8; --carte:#fff; --txt:#1c2330; --doux:#5d6778; --bord:#dfe3ea; --accent:#1f5fbf; --ok:#1d7a46; --err:#b3261e; --urg:#c0392b; --sem:#b9770e; }
   @media (prefers-color-scheme: dark) { :root { --bg:#14171c; --carte:#1d2128; --txt:#e8ebf0; --doux:#9aa3b2; --bord:#2e343e; --accent:#6aa0ff; --ok:#5fc48c; --err:#ff8a80; --urg:#ff7b6b; --sem:#f0b44c; } }
@@ -12,6 +13,8 @@
   body { margin:0; background:var(--bg); color:var(--txt); font:15px/1.5 system-ui, "Segoe UI", Roboto, sans-serif; }
   header { position:sticky; top:0; z-index:5; background:var(--accent); color:#fff; padding:10px 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
   header b { font-size:17px; margin-right:auto; }
+  .logo { display:block; height:64px; margin:0 auto 10px; } .logo.blanc { display:none; }
+  @media (prefers-color-scheme: dark) { .logo.noir { display:none; } .logo.blanc { display:block; } }
   header button { background:rgba(255,255,255,.15); color:#fff; border:0; border-radius:16px; padding:6px 12px; font:inherit; font-size:14px; cursor:pointer; }
   header button.actif { background:#fff; color:var(--accent); font-weight:600; }
   main { max-width:980px; margin:0 auto; padding:16px; }
@@ -47,7 +50,7 @@
 </head>
 <body>
 <header id="entete" class="cache">
-  <b>Soft Power Elevation</b>
+  <img src="logo_blanc.png" alt="Soft Power Elevation" style="height:34px;margin-right:auto">
   <button data-vue="offres" class="actif">Offres</button>
   <button data-vue="whatsapp">WhatsApp</button>
   <button data-vue="comptes" id="btn_comptes" class="cache">Comptes</button>
@@ -56,8 +59,8 @@
 <main>
   <!-- Connexion -->
   <section id="v_cnx" class="boite etroit cache">
-    <h1>Soft Power Elevation</h1>
-    <p class="sous">Accès réservé, autorisé par Cherif Blidi.</p>
+    <img class="logo noir" src="logo_noir.png" alt="Soft Power Elevation"><img class="logo blanc" src="logo_blanc.png" alt="">
+    <p class="sous" style="text-align:center">Accès réservé, autorisé par Cherif Blidi.</p>
     <div id="bloc_google" class="cache"><button class="p" id="b_google" style="width:100%;margin:0 0 6px;background:#fff;color:#1c2330;border-color:var(--bord)">Continuer avec Google (Gmail)</button>
     <p class="sous" style="text-align:center;margin:6px 0 0">ou avec une adresse e-mail</p></div>
     <div id="f_cnx">
