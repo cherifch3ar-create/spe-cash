@@ -229,8 +229,8 @@ $("b_google").onclick = async () => {
   if (error) msg("m_cnx", /provider is not enabled|Unsupported provider/i.test(error.message) ? "La connexion Google n'est pas encore activée par l'administrateur." : error.message);
 };
 async function sortir() { await sb.auth.signOut(); profil = null; modePublic(); }
-// Accès libre (décision du directeur, 06/11/2026) : les offres s'ouvrent sans connexion, en lecture seule.
-// WhatsApp, Comptes et les modifications restent réservés aux comptes connectés.
+// Accès libre avec le lien (décision du directeur, 06/11/2026, provisoire avant la mise en sécurité) :
+// offres, suivi et demandes aux agents sans connexion ; WhatsApp et Comptes restent réservés aux comptes connectés.
 function modePublic() {
   profil = null;
   ["btn_wa", "btn_comptes", "b_sortir"].forEach((id) => $(id).classList.add("cache"));
@@ -321,7 +321,7 @@ function ouvrir(id) {
       <button type="button" id="b_etude">📐 Demander l'étude</button>
     </div>
     ${pieces.length ? `<b>Cahier des charges (${pieces.length} pièce${pieces.length > 1 ? "s" : ""})</b><ul class="pieces">${pieces.map((x) => `<li><a href="${esc(x.lien)}" target="_blank" rel="noopener">📄 ${esc(x.nom || "Pièce")}</a></li>`).join("")}</ul>` : ""}`;
-  const ordre = async (btn, texte, ok) => { if (!profil) return msg("m_detail", "Connectez-vous (bouton « Se connecter » en haut) pour envoyer une demande aux agents."); btn.disabled = true; const e = await envoyerOrdre(texte); btn.disabled = false; msg("m_detail", e ? "Échec : " + e.message : ok, !e); };
+  const ordre = async (btn, texte, ok) => { btn.disabled = true; const e = await envoyerOrdre(texte); btn.disabled = false; msg("m_detail", e ? "Échec : " + e.message : ok, !e); };
   if ($("b_fv")) $("b_fv").onclick = (ev) => ordre(ev.currentTarget, "fiche de visite " + o.no + " : télécharger la fiche / attestation de visite si elle existe et l'envoyer dans le groupe appel d'offre SPE", "Demande envoyée aux agents : la fiche de visite arrivera dans le groupe « appel d'offre SPE ».");
   $("b_etude").onclick = (ev) => ordre(ev.currentTarget, "étude " + o.no + " : télécharger le cahier des charges et la fiche de visite, faire l'étude et l'envoyer sur WhatsApp", "Demande d'étude envoyée aux agents.");
   $("d_infos").innerHTML = lignes.filter(([, v]) => v).map(([a, v]) => `<dt>${esc(a)}</dt><dd>${esc(v)}</dd>`).join("") +
@@ -334,10 +334,9 @@ function ouvrir(id) {
 $("b_retour").onclick = () => { montrer("v_offres"); afficher(); };
 $("b_sauver").onclick = async () => {
   const o = courante; if (!o) return;
-  if (!profil) return msg("m_detail", "Connectez-vous (bouton « Se connecter » en haut) pour enregistrer le suivi.");
   $("b_sauver").disabled = true;
   const { data: actuel, error: e1 } = await sb.from("docs").select("data").eq("collection", "offres").eq("id", o._id).maybeSingle();
-  const nouveau = { ...(actuel?.data || {}), statut: $("d_statut").value, note: $("d_note").value, modifie_par: profil.nom || "site web", modifie_le: Date.now() };
+  const nouveau = { ...(actuel?.data || {}), statut: $("d_statut").value, note: $("d_note").value, modifie_par: profil?.nom || "site web (lien)", modifie_le: Date.now() };
   const { error } = e1 ? { error: e1 } : await sb.from("docs").update({ data: nouveau }).eq("collection", "offres").eq("id", o._id);
   $("b_sauver").disabled = false;
   if (error) return msg("m_detail", "Échec : " + error.message);
