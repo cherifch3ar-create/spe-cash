@@ -114,6 +114,28 @@ def event(texte, essai):
         sb_ecrire("events", "e-%d-robot_telechargement" % t, {"t": t, "agent": "robot_telechargement", "texte": texte}, fusion=False)
 
 
+def sb_envoyer_fichier(no, chemin):
+    """Copie le fichier dans le stockage en ligne (bucket « appels-offres ») pour l'ouvrir depuis le téléphone.
+    Ne remplace jamais un fichier déjà en ligne. Renvoie l'adresse publique ou None."""
+    import mimetypes
+    from urllib.parse import quote
+    nom = re.sub(r"[^A-Za-z0-9._-]", "_", chemin.name)
+    cle = "%s/%s" % (re.sub(r"[^A-Za-z0-9._-]", "_", no), nom)
+    url_pub = "%s/storage/v1/object/public/%s/%s" % (SB_URL, CONFIG.get("bucket", "appels-offres"), quote(cle))
+    h = {"apikey": SB_CLE, "Authorization": "Bearer " + SB_CLE,
+         "Content-Type": mimetypes.guess_type(nom)[0] or "application/octet-stream"}
+    try:
+        with open(chemin, "rb") as f:
+            r = requests.post("%s/storage/v1/object/%s/%s" % (SB_URL, CONFIG.get("bucket", "appels-offres"), quote(cle)),
+                              headers=h, data=f, timeout=120)
+        if r.status_code < 300 or "exists" in r.text.lower() or r.status_code == 409:
+            return url_pub
+        journal("  stockage en ligne refusé pour %s : %s %s" % (nom, r.status_code, r.text[:150]))
+    except (OSError, requests.RequestException) as ex:
+        journal("  stockage en ligne injoignable pour %s : %s" % (nom, ex))
+    return None
+
+
 # ---------------------------------------------------------------- liste de travail
 def lire_priorites():
     f = ICI / "priorites.txt"
@@ -296,6 +318,15 @@ def telecharger_offre(page, offre, essai, pause_s):
         time.sleep(pause_s)
 
     bons = [f for f in fichiers if f["ok"]]
+    en_ligne = []
+    if CONFIG.get("envoyer_en_ligne", True):
+        for f in bons:
+            u = sb_envoyer_fichier(no, dossier / f["nom"])
+            if u:
+                f["url"] = u
+                en_ligne.append({"nom": f["nom"], "url": u})
+                if fiche and fiche.get("dossier_pc", "").endswith(f["nom"]):
+                    fiche["url"] = u
     if not fichiers:
         statut = "introuvable"
         (dossier / "_page_tuneps.html").write_text(page.content(), encoding="utf-8")
@@ -308,7 +339,7 @@ def telecharger_offre(page, offre, essai, pause_s):
     (dossier / "_pieces.json").write_text(json.dumps(resume, ensure_ascii=False, indent=2), encoding="utf-8")
 
     tel = {"total": resume["total"], "telecharges": len(bons), "manquants": manquants, "dossier_pc": str(dossier), "lien": lien,
-           "statut": statut, "verifie_par": "robot", "maj": maintenant_ms()}
+           "statut": statut, "verifie_par": "robot", "maj": maintenant_ms(), "fichiers_en_ligne": en_ligne}
     if statut == "complet":
         tel["controle"] = {"ok": True, "par": "robot", "t": maintenant_ms()}
     champs = {"telechargement": tel, "pieces_telechargees": [f["nom"] for f in bons]}

@@ -5,5 +5,7 @@
   "max_offres": 15,
   "pause_secondes": 3,
   "supabase_url": "https://djvygsbdwcoyldujrezq.supabase.co",
-  "supabase_cle_publique": "sb_publishable_c_LW07RXjWmU_KctUhrg6w_m8Kg6AJ8"
+  "supabase_cle_publique": "sb_publishable_c_LW07RXjWmU_KctUhrg6w_m8Kg6AJ8",
+  "bucket": "appels-offres",
+  "envoyer_en_ligne": true
 }
