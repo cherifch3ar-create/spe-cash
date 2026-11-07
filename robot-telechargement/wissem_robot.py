@@ -456,8 +456,11 @@ def garder_session():
         try:
             verifier_connexion(page)
             journal("Garde-session : TUNEPS reste connecté")
+            if not deja_signale("session_ok", 3):  # au plus toutes les 3 h, pour le Diagnostic
+                t = maintenant_ms()
+                sb_ecrire("events", "e-%d-robot_garde_session" % t, {"t": t, "agent": "robot_garde_session", "texte": "Clé / session TUNEPS : connectée ✅"}, fusion=False)
         except Deconnecte as ex:
-            event("BESOIN — Robot garde-session : %s. Geste : se reconnecter à TUNEPS dans la fenêtre Chrome du robot (vous tapez vous-même le code)." % ex, False)
+            event("BESOIN — Robot garde-session : clé / session TUNEPS déconnectée (%s). Geste : se reconnecter à TUNEPS dans la fenêtre Chrome du robot (vous tapez vous-même le code)." % ex, False)
         # l'onglet TUNEPS reste ouvert pour le prochain passage
     return 0
 
