@@ -260,6 +260,59 @@ def liens_pieces(page):
     return cand
 
 
+def pieces_par_api(page, no, dossier, presents):
+    """Secours : liste publique des pièces de TUNEPS (adresses déjà utilisées par les agents SPE),
+    lue DANS le navigateur (même session, même origine). Enregistre la réponse pour analyse."""
+    base = "https://www.tuneps.tn"
+    adresses = ["/api2/ged/spShopAttachFile/getByShopNo?shopNo=" + no, "/api2/ged//vAttachFile/getByBidNo?bidNo=" + no]
+    if not no.upper().startswith("S"):
+        adresses.reverse()
+    trouves = []
+    for a in adresses:
+        try:
+            rep = page.context.request.get(base + a, timeout=30000)
+            if not rep.ok:
+                continue
+            texte = rep.text()
+            (dossier / ("_api_%s.json" % ("shop" if "Shop" in a else "bid"))).write_text(texte, encoding="utf-8")
+            try:
+                donnees = json.loads(texte)
+            except ValueError:
+                continue
+            # chercher toute adresse de fichier dans la réponse
+            pile, urls = [donnees], []
+            while pile:
+                x = pile.pop()
+                if isinstance(x, dict):
+                    pile.extend(x.values())
+                elif isinstance(x, list):
+                    pile.extend(x)
+                elif isinstance(x, str):
+                    xl = x.lower().split("?")[0]
+                    if (x.startswith("/") or x.startswith("http")) and (xl.endswith(EXTENSIONS) or "download" in xl or "telecharg" in xl):
+                        urls.append(urljoin(base, x))
+            for u in dict.fromkeys(urls):
+                try:
+                    r = page.context.request.get(u, timeout=60000)
+                    if not r.ok:
+                        continue
+                    nom = u.split("/")[-1].split("?")[0] or "piece"
+                    if nom in presents:
+                        continue
+                    cible = nom_libre(dossier, nom)
+                    cible.write_bytes(r.body())
+                    ok = fichier_ok(cible)
+                    trouves.append({"nom": cible.name, "octets": cible.stat().st_size, "ok": ok, "lien_texte": "liste publique TUNEPS"})
+                    journal("  + %s (liste publique, %s)" % (cible.name, "OK" if ok else "illisible"))
+                except Exception:
+                    pass
+            if trouves:
+                break
+        except Exception as ex:
+            journal("  liste publique %s : %s" % (a, type(ex).__name__))
+    return trouves
+
+
 def telecharger_offre(page, offre, essai, pause_s):
     no, lien = offre["no"], offre["lien"]
     dossier = RACINE / no
@@ -317,6 +370,11 @@ def telecharger_offre(page, offre, essai, pause_s):
             journal("  - pas de fichier pour « %s » (%s)" % (e["txt"][:60], type(ex).__name__))
         time.sleep(pause_s)
 
+    if not fichiers:
+        fichiers = pieces_par_api(page, no, dossier, presents)
+        for f in fichiers:
+            if "visite" in f["nom"].lower() and not fiche:
+                fiche = {"dossier_pc": str(dossier / f["nom"]), "t": maintenant_ms()}
     bons = [f for f in fichiers if f["ok"]]
     en_ligne = []
     if CONFIG.get("envoyer_en_ligne", True):
