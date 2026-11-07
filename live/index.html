@@ -6,6 +6,8 @@
 <title>Soft Power Elevation</title>
 <meta name="theme-color" content="#1f5fbf">
 <link rel="icon" href="icone.png">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icone.png">
 <style>
   :root { --bg:#f5f6f8; --carte:#fff; --txt:#1c2330; --doux:#5d6778; --bord:#dfe3ea; --accent:#1f5fbf; --ok:#1d7a46; --err:#b3261e; --urg:#c0392b; --sem:#b9770e; }
   @media (prefers-color-scheme: dark) { :root { --bg:#14171c; --carte:#1d2128; --txt:#e8ebf0; --doux:#9aa3b2; --bord:#2e343e; --accent:#6aa0ff; --ok:#5fc48c; --err:#ff8a80; --urg:#ff7b6b; --sem:#f0b44c; } }
@@ -37,6 +39,13 @@
   @media (max-width:600px) { .chiffres { grid-template-columns:repeat(2, 1fr); } }
   .chiffre { background:var(--carte); border:1px solid var(--bord); border-radius:10px; padding:10px 12px; }
   .chiffre b { display:block; font-size:22px; } .chiffre span { color:var(--doux); font-size:13px; }
+  .offre .img { float:right; width:110px; height:74px; object-fit:cover; border-radius:6px; margin:0 0 6px 10px; background:var(--bord); }
+  .offre::after { content:""; display:block; clear:both; }
+  .j { font-weight:700; } .j.urg { color:var(--urg); }
+  .d_img { width:100%; max-height:260px; object-fit:cover; border-radius:10px; margin:0 0 12px; background:var(--bord); }
+  .actions { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; } .actions a, .actions button { display:inline-flex; align-items:center; gap:6px; min-height:40px; padding:8px 12px; border:1px solid var(--accent); border-radius:8px; color:var(--accent); background:transparent; font:inherit; font-weight:600; text-decoration:none; cursor:pointer; }
+  .pieces { margin:6px 0 0; padding-left:18px; } .pieces li { margin:3px 0; }
+  #b_install { display:none; }
   .offre { background:var(--carte); border:1px solid var(--bord); border-left:4px solid var(--bord); border-radius:8px; padding:12px 14px; margin-bottom:8px; cursor:pointer; }
   .offre.URGENT { border-left-color:var(--urg); } .offre.SEMAINE { border-left-color:var(--sem); }
   .offre .t { font-weight:600; } .offre .m { color:var(--doux); font-size:13px; margin-top:4px; display:flex; gap:12px; flex-wrap:wrap; }
@@ -52,8 +61,10 @@
 <header id="entete" class="cache">
   <img src="logo_blanc.png" alt="Soft Power Elevation" style="height:34px;margin-right:auto">
   <button data-vue="offres" class="actif">Offres</button>
-  <button data-vue="whatsapp">WhatsApp</button>
+  <button data-vue="whatsapp" id="btn_wa">WhatsApp</button>
   <button data-vue="comptes" id="btn_comptes" class="cache">Comptes</button>
+  <button id="b_install" type="button">📲 Installer l'application</button>
+  <button id="b_entrer" class="cache">Se connecter</button>
   <button id="b_sortir">Sortir</button>
 </header>
 <main>
@@ -110,7 +121,8 @@
     <section class="boite">
       <h1 id="d_objet"></h1>
       <p class="sous" id="d_ar" dir="rtl"></p>
-      <dl id="d_infos"></dl>
+      <div id="d_actions"></div>
+<dl id="d_infos"></dl>
     </section>
     <section class="boite">
       <h2>Suivi</h2>
@@ -170,6 +182,31 @@ function classe(o) {
   return h < 0 ? "expirees" : h < 48 ? "URGENT" : h < 168 ? "SEMAINE" : "PLUS_TARD";
 }
 const libelle = { URGENT: "Urgent", SEMAINE: "Cette semaine", PLUS_TARD: "Plus tard", expirees: "Expirée" };
+// ---------- images des domaines (images fixes du directeur, Supabase) ----------
+const IMG = "https://djvygsbdwcoyldujrezq.supabase.co/storage/v1/object/public/images-domaines/";
+function imageDomaine(o) {
+  // d'abord le domaine choisi par les agents (champ metier), ensuite les mots de l'objet
+  const m = (o.metier || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const parMetier = [[/ascenseur/, "ascenseurs"], [/portail/, "portails_automatiques"], [/surveillance|alarme|incendie/, "surveillance_alarme_incendie"], [/chaud|froid|climatis/, "mecanique"], [/variateur/, "variateurs_equipements_industriels"], [/blanchisserie/, "blanchisserie"], [/peinture/, "peinture"], [/maritime/, "maritime"], [/engin|levage|hydraul/, "levage_hydraulique"], [/metal/, "construction_metallique"], [/electri/, "electrique"], [/mecanique/, "mecanique"]];
+  for (const [re, f] of parMetier) if (re.test(m)) return IMG + "metier_" + f + ".jpg";
+  const t = ((o.metier || "") + " " + (o.objet || "") + " " + (o.objet_ar || "")).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const f = /ascenseur|monte-charge|مصاعد/.test(t) ? "ascenseurs" : /portail|barriere|porte automatique|rideau/.test(t) ? "portails_automatiques"
+    : /surveil|camera|alarme|incendie|pointage|controle d.acces|video/.test(t) ? "surveillance_alarme_incendie"
+    : /climatis|chauffage|froid|frigorif|chaudiere|ventilation|مكيف|تكييف|تبريد|تدفئة/.test(t) ? "mecanique"
+    : /variateur|automate|industriel/.test(t) ? "variateurs_equipements_industriels"
+    : /electri|eclairage|cable|transfo|groupe electrogene|onduleur|photovolt|تنوير|كهرب/.test(t) ? "electrique"
+    : /peint|دهن|طلاء/.test(t) ? "peinture" : /maritime|port|navire|naval|remorqueur/.test(t) ? "maritime"
+    : /engin|levage|hydraul|grue|camion|tracto|chariot|chargeuse|bus/.test(t) ? "levage_hydraulique"
+    : /metal|cloture|charpente|soudure|garde-corps|سياج/.test(t) ? "construction_metallique"
+    : /blanchisserie|buanderie|cuisine|lave/.test(t) ? "blanchisserie" : "mecanique";
+  return IMG + "metier_" + f + ".jpg";
+}
+function jours(o) { if (!o.tri) return ""; const j = Math.ceil((o.tri - Date.now()) / 86400000); return j < 0 ? "" : "J-" + j; }
+async function envoyerOrdre(texte) {
+  const id = "o-" + Date.now();
+  const { error } = await sb.from("docs").insert({ collection: "ordres", id, data: { texte, t: Date.now(), statut: "nouveau", source: "site web", par: profil?.nom || "" }, maj: Date.now(), source: "web" });
+  return error;
+}
 
 // ---------- connexion ----------
 $("vers_insc").onclick = (e) => { e.preventDefault(); $("f_cnx").classList.add("cache"); $("f_insc").classList.remove("cache"); msg("m_cnx", ""); };
@@ -195,12 +232,22 @@ $("b_google").onclick = async () => {
   const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.href.split("#")[0].split("?")[0] } });
   if (error) msg("m_cnx", /provider is not enabled|Unsupported provider/i.test(error.message) ? "La connexion Google n'est pas encore activée par l'administrateur." : error.message);
 };
-async function sortir() { await sb.auth.signOut(); profil = null; montrer("v_cnx"); }
+async function sortir() { await sb.auth.signOut(); profil = null; modePublic(); }
+// Accès libre avec le lien (décision du directeur, 06/11/2026, provisoire avant la mise en sécurité) :
+// offres, suivi et demandes aux agents sans connexion ; WhatsApp et Comptes restent réservés aux comptes connectés.
+function modePublic() {
+  profil = null;
+  ["btn_wa", "btn_comptes", "b_sortir"].forEach((id) => $(id).classList.add("cache"));
+  $("b_entrer").classList.remove("cache");
+  montrer("v_offres");
+  chargerOffres();
+}
+$("b_entrer").onclick = () => montrer("v_cnx");
 $("b_sortir").onclick = sortir; $("b_sortir2").onclick = sortir;
 
 async function demarrer() {
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) return montrer("v_cnx");
+  if (!session) return modePublic();
   const { data, error } = await sb.from("profils").select("user_id, nom, role, statut").eq("user_id", session.user.id).maybeSingle();
   if (error || !data) { montrer("v_attente"); $("t_attente").textContent = "Profil introuvable. Contactez Cherif Blidi."; return; }
   profil = data;
@@ -210,6 +257,7 @@ async function demarrer() {
     return;
   }
   $("btn_comptes").classList.toggle("cache", profil.role !== "admin");
+  ["btn_wa", "b_sortir"].forEach((id) => $(id).classList.remove("cache")); $("b_entrer").classList.add("cache");
   montrer("v_offres");
   chargerOffres();
 }
@@ -251,9 +299,9 @@ function afficher() {
   if (!L.length) { $("liste").innerHTML = '<p class="vide">Aucune offre ne correspond aux filtres.</p>'; return; }
   $("liste").innerHTML = L.slice(0, 300).map((o) => {
     const k = classe(o);
-    return `<div class="offre ${k}" data-id="${esc(o._id)}">
+    return `<div class="offre ${k}" data-id="${esc(o._id)}"><img class="img" loading="lazy" alt="" src="${imageDomaine(o)}">
       <div class="t">${esc(o.objet || o.objet_ar || o.no)}</div>
-      <div class="m"><span class="pastille ${k}">${esc(libelle[k])}</span><span>${esc(o.limite || "")}</span><span>${esc(o.gouvernorat || "")}</span><span>${esc(o.metier || "")}</span><span>${esc(o.acheteur || "")}</span>${o.cahier_dispo ? "<span>📄 cahier des charges</span>" : ""}${o.statut ? `<span>• ${esc(o.statut)}</span>` : ""}</div>
+      <div class="m"><span class="pastille ${k}">${esc(libelle[k])}</span><span>${esc(o.limite || "")} <b class="j ${k === "URGENT" ? "urg" : ""}">${jours(o)}</b></span><span>${esc(o.gouvernorat || "")}</span><span>${esc(o.metier || "")}</span><span>${esc(o.acheteur || "")}</span>${o.cahier_dispo ? "<span>📄 cahier des charges</span>" : ""}${o.statut ? `<span>• ${esc(o.statut)}</span>` : ""}</div>
     </div>`;
   }).join("") + (L.length > 300 ? `<p class="vide">${L.length - 300} autres offres : affinez les filtres.</p>` : "");
 }
@@ -268,6 +316,18 @@ function ouvrir(id) {
   $("d_ar").textContent = o.objet_ar && o.objet_ar !== o.objet ? o.objet_ar : "";
   const lignes = [["N° TUNEPS", o.no], ["Acheteur", o.acheteur], ["Date limite", (o.limite || "") + " — " + libelle[k]], ["Gouvernorat", o.gouvernorat + (o.gouvernorat_source === "TUNEPS" ? " (officiel TUNEPS)" : "")],
     ["Domaine SPE", o.metier], ["Catégorie TUNEPS", o.categorie_tuneps], ["Procédure", o.procedure], ["Documents", o.nb_documents != null ? o.nb_documents + (o.cahier_dispo ? " — cahier des charges disponible" : "") : ""], ["Publiée", o.publie]];
+  const pieces = Array.isArray(o.pieces) ? o.pieces.filter((x) => x && x.lien) : [];
+  const fv = o.fiche_visite && o.fiche_visite.lien ? o.fiche_visite : null;
+  $("d_actions").innerHTML = `<img class="d_img" alt="" src="${imageDomaine(o)}">
+    <div class="actions">
+      ${/^https:\/\/www\.tuneps\.tn\//.test(o.lien || "") ? `<a href="${esc(o.lien)}" target="_blank" rel="noopener">🔗 Ouvrir sur TUNEPS</a>` : ""}
+      ${fv ? `<a href="${esc(fv.lien)}" target="_blank" rel="noopener">📋 Fiche de visite</a>` : `<button type="button" id="b_fv">📋 Demander la fiche de visite</button>`}
+      <button type="button" id="b_etude">📐 Demander l'étude</button>
+    </div>
+    ${pieces.length ? `<b>Cahier des charges (${pieces.length} pièce${pieces.length > 1 ? "s" : ""})</b><ul class="pieces">${pieces.map((x) => `<li><a href="${esc(x.lien)}" target="_blank" rel="noopener">📄 ${esc(x.nom || "Pièce")}</a></li>`).join("")}</ul>` : ""}`;
+  const ordre = async (btn, texte, ok) => { btn.disabled = true; const e = await envoyerOrdre(texte); btn.disabled = false; msg("m_detail", e ? "Échec : " + e.message : ok, !e); };
+  if ($("b_fv")) $("b_fv").onclick = (ev) => ordre(ev.currentTarget, "fiche de visite " + o.no + " : télécharger la fiche / attestation de visite si elle existe et l'envoyer dans le groupe appel d'offre SPE", "Demande envoyée aux agents : la fiche de visite arrivera dans le groupe « appel d'offre SPE ».");
+  $("b_etude").onclick = (ev) => ordre(ev.currentTarget, "étude " + o.no + " : télécharger le cahier des charges et la fiche de visite, faire l'étude et l'envoyer sur WhatsApp", "Demande d'étude envoyée aux agents.");
   $("d_infos").innerHTML = lignes.filter(([, v]) => v).map(([a, v]) => `<dt>${esc(a)}</dt><dd>${esc(v)}</dd>`).join("") +
     (/^https:\/\/www\.tuneps\.tn\//.test(o.lien || "") ? `<dt>TUNEPS</dt><dd><a href="${esc(o.lien)}" target="_blank" rel="noopener">Ouvrir l'offre sur TUNEPS</a></dd>` : "");
   $("d_statut").value = o.statut && [...$("d_statut").options].some((x) => x.value === o.statut) ? o.statut : "";
@@ -280,7 +340,7 @@ $("b_sauver").onclick = async () => {
   const o = courante; if (!o) return;
   $("b_sauver").disabled = true;
   const { data: actuel, error: e1 } = await sb.from("docs").select("data").eq("collection", "offres").eq("id", o._id).maybeSingle();
-  const nouveau = { ...(actuel?.data || {}), statut: $("d_statut").value, note: $("d_note").value, modifie_par: profil.nom || "site web", modifie_le: Date.now() };
+  const nouveau = { ...(actuel?.data || {}), statut: $("d_statut").value, note: $("d_note").value, modifie_par: profil?.nom || "site web (lien)", modifie_le: Date.now() };
   const { error } = e1 ? { error: e1 } : await sb.from("docs").update({ data: nouveau }).eq("collection", "offres").eq("id", o._id);
   $("b_sauver").disabled = false;
   if (error) return msg("m_detail", "Échec : " + error.message);
@@ -380,6 +440,16 @@ $("wa_liste").onclick = async (e) => {
 sb.auth.onAuthStateChange((ev) => { if (ev === "SIGNED_OUT") montrer("v_cnx"); });
 // Le bouton Google n'apparaît que si la connexion Google est activée dans Supabase.
 fetch(URL_SB + "/auth/v1/settings", { headers: { apikey: CLE_PUB } }).then((r) => r.json()).then((j) => { if (j && j.external && j.external.google) $("bloc_google").classList.remove("cache"); }).catch(() => {});
+// ---------- installation (téléphone et PC) ----------
+let invite = null;
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); invite = e; $("b_install").style.display = "inline-block"; });
+window.addEventListener("appinstalled", () => { $("b_install").style.display = "none"; });
+if (/iphone|ipad/i.test(navigator.userAgent) && !navigator.standalone) $("b_install").style.display = "inline-block";
+$("b_install").onclick = async () => {
+  if (invite) { invite.prompt(); await invite.userChoice; invite = null; $("b_install").style.display = "none"; return; }
+  alert("iPhone : touchez Partager (carré avec flèche) puis « Sur l'écran d'accueil ».\nAndroid / PC : menu ⋮ de Chrome puis « Installer l'application ».");
+};
 demarrer();
 </script>
 </body>

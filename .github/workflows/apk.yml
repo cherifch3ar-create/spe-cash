@@ -1,0 +1,31 @@
+name: APK SPE Workspace
+on:
+  push:
+    branches: [main, claude/spe-live-ameliorations]
+    paths: ["android/**", ".github/workflows/apk.yml"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      - uses: gradle/actions/setup-gradle@v3
+        with: { gradle-version: "8.7" }
+      - name: Construire l'APK
+        working-directory: android
+        run: gradle assembleRelease --no-daemon
+      - run: cp android/app/build/outputs/apk/release/app-release.apk spe-workspace.apk
+      - uses: actions/upload-artifact@v4
+        with: { name: spe-workspace-apk, path: spe-workspace.apk }
+      - name: Publier dans les Releases (lien fixe)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-latest
+          name: SPE Workspace — application Android
+          body: "Télécharger spe-workspace.apk puis l'ouvrir sur le téléphone (autoriser l'installation depuis cette source)."
+          files: spe-workspace.apk
+          make_latest: true
