@@ -11,6 +11,7 @@ Usage :
   python wissem_robot.py              passage normal (priorites.txt puis offres de Supabase)
   python wissem_robot.py --essai      montre ce qu'il ferait, sans rien télécharger ni écrire
   python wissem_robot.py --max 5      limite le nombre d'offres
+  python wissem_robot.py --garder-session   garde TUNEPS connecté (toutes les 10 minutes)
 """
 import argparse
 import datetime as dt
@@ -107,8 +108,31 @@ def sb_ecrire(collection, doc_id, data, fusion=True):
     return True
 
 
+MEMOIRE = ICI / "_memoire_robot.json"
+
+
+def deja_signale(cle, heures):
+    """Évite de répéter le même message toutes les heures (robot 24 h/24)."""
+    try:
+        m = json.loads(MEMOIRE.read_text(encoding="utf-8")) if MEMOIRE.exists() else {}
+    except (OSError, ValueError):
+        m = {}
+    if maintenant_ms() - m.get(cle, 0) < heures * 3600 * 1000:
+        return True
+    m[cle] = maintenant_ms()
+    try:
+        MEMOIRE.write_text(json.dumps(m), encoding="utf-8")
+    except OSError:
+        pass
+    return False
+
+
 def event(texte, essai):
     journal("EVENT : " + texte)
+    if texte.startswith("BESOIN") and deja_signale("besoin:" + texte[:60], 6):
+        return
+    if "aucune offre à télécharger" in texte and deja_signale("rien", 12):
+        return
     if not essai:
         t = maintenant_ms()
         sb_ecrire("events", "e-%d-robot_telechargement" % t, {"t": t, "agent": "robot_telechargement", "texte": texte}, fusion=False)
@@ -407,7 +431,60 @@ def telecharger_offre(page, offre, essai, pause_s):
     return resume
 
 
+def garder_session():
+    """Robot « garde-session » : toutes les 10 minutes, rafraîchit un onglet TUNEPS du Chrome du robot
+    et clique « Annuler » sur la fenêtre d'inactivité, pour que TUNEPS reste connecté jour et nuit.
+    Ne tape jamais rien. Si TUNEPS est déconnecté : un BESOIN (au plus toutes les 6 h)."""
+    from playwright.sync_api import sync_playwright
+    with sync_playwright() as pw:
+        try:
+            nav = pw.chromium.connect_over_cdp("http://localhost:%d" % CONFIG.get("port_chrome", 9222), timeout=15000)
+        except Exception:
+            event("BESOIN — Robot garde-session : la fenêtre Chrome du robot est fermée. Geste : double-cliquer Lancer-Chrome-SPE.bat sur le PC bureau.", False)
+            return 2
+        ctx = nav.contexts[0] if nav.contexts else nav.new_context()
+        page = next((p for p in ctx.pages if "tuneps.tn" in p.url), None)
+        cree = page is None
+        if cree:
+            page = ctx.new_page()
+            page.goto("https://www.tuneps.tn/", wait_until="domcontentloaded", timeout=60000)
+        else:
+            fermer_inactivite(page)
+            page.reload(wait_until="domcontentloaded", timeout=60000)
+        page.wait_for_timeout(2000)
+        fermer_inactivite(page)
+        try:
+            verifier_connexion(page)
+            journal("Garde-session : TUNEPS reste connecté")
+        except Deconnecte as ex:
+            event("BESOIN — Robot garde-session : %s. Geste : se reconnecter à TUNEPS dans la fenêtre Chrome du robot (vous tapez vous-même le code)." % ex, False)
+        # l'onglet TUNEPS reste ouvert pour le prochain passage
+    return 0
+
+
 def main():
+    if "--garder-session" in sys.argv:
+        return garder_session()
+    verrou = ICI / "_robot_en_cours.lock"
+    try:
+        if verrou.exists() and time.time() - verrou.stat().st_mtime < 3 * 3600:
+            journal("Un passage du robot est déjà en cours : ce passage s'arrête.")
+            return 0
+        verrou.write_text(str(os.getpid()), encoding="utf-8")
+    except OSError:
+        pass
+    try:
+        return _main()
+    finally:
+        try:
+            verrou.unlink()
+        except OSError:
+            pass
+
+
+def _main():
+    if "--garder-session" in sys.argv:
+        return garder_session()
     ap = argparse.ArgumentParser()
     ap.add_argument("--essai", action="store_true", help="ne télécharge et n'écrit rien")
     ap.add_argument("--max", type=int, default=CONFIG.get("max_offres", 15))
