@@ -1,0 +1,17 @@
+name: Essai acces TUNEPS
+on:
+  push:
+    branches: [claude/robot-en-ligne]
+jobs:
+  essai:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Joindre TUNEPS
+        run: |
+          for no in S20261100936 S20261100955 S20261101168; do
+            for u in "https://www.tuneps.tn/api2/ged/spShopAttachFile/getByShopNo?shopNo=$no" "https://www.tuneps.tn/api2/ged//vAttachFile/getByBidNo?bidNo=$no"; do
+              echo "=== $u"
+              curl -sS -m 40 -A "Mozilla/5.0" -w "\nHTTP %{http_code}\n" "$u" | head -c 1500; echo
+            done
+          done
+          echo "=== page d'accueil"; curl -sS -m 40 -o /dev/null -w "HTTP %{http_code}\n" https://www.tuneps.tn/
