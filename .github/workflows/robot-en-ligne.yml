@@ -11,7 +11,7 @@ on:
         default: "40"
   push:
     branches: [claude/robot-en-ligne]
-    paths: [robot-telechargement/robot_en_ligne.py, .github/workflows/robot-en-ligne.yml]
+    paths: [robot-telechargement/robot_en_ligne.py]
 concurrency:
   group: robot-en-ligne
   cancel-in-progress: false

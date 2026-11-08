@@ -190,6 +190,13 @@ def traiter(no, essai):
             log("  (essai) %s — %s" % (p["nom"], p["type"]))
         return "essai", 0
     en_ligne, manquants, fiche = [], [], None
+    vus = {}
+    for p in pieces:  # plusieurs pièces peuvent porter le même nom : on numérote les suivantes
+        n = vus.get(p["nom"].lower(), 0) + 1
+        vus[p["nom"].lower()] = n
+        if n > 1:
+            base, ext = os.path.splitext(p["nom"])
+            p["nom"] = "%s_%d%s" % (base, n, ext)
     for p in pieces:
         try:
             octets = telecharger(no, p["ref"], p["nom"])
