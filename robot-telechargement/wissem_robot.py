@@ -432,10 +432,14 @@ def telecharger_offre(page, offre, essai, pause_s):
 
 
 def garder_session():
-    """Robot « garde-session » : toutes les 10 minutes, rafraîchit un onglet TUNEPS du Chrome du robot
-    et clique « Annuler » sur la fenêtre d'inactivité, pour que TUNEPS reste connecté jour et nuit.
-    Ne tape jamais rien. Si TUNEPS est déconnecté : un BESOIN (au plus toutes les 6 h)."""
+    """Robot « garde-session » : pendant ~10 minutes, toutes les 45 secondes, rafraîchit l'onglet TUNEPS du Chrome
+    du robot et clique « Annuler » sur la fenêtre d'inactivité (TUNEPS ferme la session après 2 à 3 minutes).
+    La tâche Windows le relance toutes les 10 minutes : il tourne donc sans arrêt, jour et nuit.
+    Ne tape jamais rien. Si TUNEPS est déconnecté : un BESOIN (au plus toutes les 6 h) et arrêt."""
     from playwright.sync_api import sync_playwright
+    duree = float(CONFIG.get("garde_minutes", 9.5)) * 60
+    pas = float(CONFIG.get("garde_secondes", 45))
+    debut = time.time()
     with sync_playwright() as pw:
         try:
             nav = pw.chromium.connect_over_cdp("http://localhost:%d" % CONFIG.get("port_chrome", 9222), timeout=15000)
@@ -443,22 +447,37 @@ def garder_session():
             event("BESOIN — Robot garde-session : la fenêtre Chrome du robot est fermée. Geste : double-cliquer Lancer-Chrome-SPE.bat sur le PC bureau.", False)
             return 2
         ctx = nav.contexts[0] if nav.contexts else nav.new_context()
-        page = next((p for p in ctx.pages if "tuneps.tn" in p.url), None)
-        cree = page is None
-        if cree:
-            page = ctx.new_page()
-            page.goto("https://www.tuneps.tn/", wait_until="domcontentloaded", timeout=60000)
-        else:
-            fermer_inactivite(page)
-            page.reload(wait_until="domcontentloaded", timeout=60000)
-        page.wait_for_timeout(2000)
-        fermer_inactivite(page)
-        try:
-            verifier_connexion(page)
-            journal("Garde-session : TUNEPS reste connecté")
-        except Deconnecte as ex:
-            event("BESOIN — Robot garde-session : %s. Geste : se reconnecter à TUNEPS dans la fenêtre Chrome du robot (vous tapez vous-même le code)." % ex, False)
-        # l'onglet TUNEPS reste ouvert pour le prochain passage
+        while True:
+            try:
+                page = next((p for p in ctx.pages if "tuneps.tn" in p.url), None)
+                if page is None:
+                    page = ctx.new_page()
+                    page.goto("https://www.tuneps.tn/", wait_until="domcontentloaded", timeout=60000)
+                else:
+                    fermer_inactivite(page)
+                    page.reload(wait_until="domcontentloaded", timeout=60000)
+                page.wait_for_timeout(2000)
+                fermer_inactivite(page)
+                verifier_connexion(page)
+                if not deja_signale("session_ok", 3):  # au plus toutes les 3 h, pour le Diagnostic
+                    t = maintenant_ms()
+                    sb_ecrire("events", "e-%d-robot_garde_session" % t, {"t": t, "agent": "robot_garde_session", "texte": "Clé / session TUNEPS : connectée ✅"}, fusion=False)
+            except Deconnecte as ex:
+                event("BESOIN — Robot garde-session : clé / session TUNEPS déconnectée (%s). Geste : se reconnecter à TUNEPS dans la fenêtre Chrome du robot (vous tapez vous-même le code)." % ex, False)
+                return 0
+            except Exception as ex:
+                journal("Garde-session : %s" % type(ex).__name__)
+            if time.time() - debut + pas > duree:
+                break
+            # pendant l'attente, surveiller la fenêtre d'inactivité toutes les 5 secondes
+            fin = time.time() + pas
+            while time.time() < fin:
+                time.sleep(5)
+                try:
+                    fermer_inactivite(page)
+                except Exception:
+                    pass
+    journal("Garde-session : TUNEPS gardé connecté pendant %d min" % ((time.time() - debut) // 60))
     return 0
 
 
