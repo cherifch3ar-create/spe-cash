@@ -7,7 +7,7 @@
 | 1 | Relevé TUNEPS (nouvelles offres) | toutes les 2 h, 24/24 | recherche mécanique de Rayen | en service |
 | 2 | WhatsApp (envoi de la file) | permanent | envoi d'Amine | en service |
 | 3 | **Téléchargement** des cahiers des charges + fiches de visite, copie en ligne | **toutes les heures, 24/24** | Wissem | prêt — à installer |
-| 4 | **Garde-session TUNEPS** (rafraîchit, clique « Annuler ») | **toutes les 10 min, 24/24** | reconnexions manuelles | prêt — à installer |
+| 4 | **Garde-session TUNEPS** (rafraîchit, clique « Annuler ») | **en continu (toutes les 45 s), 24/24** | reconnexions manuelles | prêt — à installer |
 | 5 | Copie SPE Live → application (Supabase) | 2 fois/jour (12h47, 18h47) | — | en service |
 | 6+ | Un nouveau robot par jour ouvrable, proposé par Khalil | — | tâches répétitives repérées dans les events | Khalil : 10h37 lun–sam |
 
