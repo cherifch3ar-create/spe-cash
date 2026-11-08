@@ -6,7 +6,8 @@ Tourne sur GitHub Actions (toutes les heures). Aucune IA, aucun mot de passe.
 Il utilise uniquement la partie publique de TUNEPS :
   liste des pièces  : /api2/ged/spShopAttachFile/getByShopNo?shopNo=S...  (consultations)
                       /api2/ged//vAttachFile/getByBidNo?bidNo=2026...       (appels d'offres)
-  fichier           : /api2/ged/document/downloadFile?noderef=...
+  fichier           : /api2/ged-shop/document/downloadFile?noderef=...&fileName=...  (consultations)
+                      /api2/ged/document/downloadFile?noderef=...&fileName=...       (appels d'offres)
 Il ne dépose, ne signe, ne paie et ne supprime rien. Il ne remplace jamais un fichier déjà en ligne.
 
 Usage : python robot_en_ligne.py [--max 25] [--essai]
@@ -139,10 +140,18 @@ def liste_pieces(no):
     return []
 
 
-def telecharger(ref):
-    r = TN.get(TUNEPS + "/api2/ged/document/downloadFile", params={"noderef": ref}, timeout=120, verify=VERIF)
-    r.raise_for_status()
-    return r.content
+def telecharger(no, ref, nom):
+    """Consultations (S…) : GED « ged-shop » ; appels d'offres : GED « ged » (adresses du code public de TUNEPS)."""
+    bases = ["/api2/ged-shop/document/downloadFile", "/api2/ged/document/downloadFile"]
+    if not no.startswith("S"):
+        bases.reverse()
+    dernier = None
+    for b in bases:
+        r = TN.get(TUNEPS + b, params={"noderef": ref, "fileName": nom}, timeout=120, verify=VERIF)
+        if r.ok and fichier_ok(r.content, nom):
+            return r.content
+        dernier = "HTTP %d, %d octets" % (r.status_code, len(r.content))
+    raise ValueError("téléchargement refusé (%s)" % dernier)
 
 
 def fichier_ok(octets, nom):
@@ -183,9 +192,7 @@ def traiter(no, essai):
     en_ligne, manquants, fiche = [], [], None
     for p in pieces:
         try:
-            octets = telecharger(p["ref"])
-            if not fichier_ok(octets, p["nom"]):
-                raise ValueError("fichier illisible (%d octets)" % len(octets))
+            octets = telecharger(no, p["ref"], p["nom"])
             url = envoyer(no, p["nom"], octets)
             if not url:
                 raise ValueError("copie en ligne refusée")
