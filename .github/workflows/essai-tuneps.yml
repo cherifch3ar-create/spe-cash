@@ -1,0 +1,27 @@
+name: Essai format telechargement TUNEPS
+on:
+  push:
+    branches: [claude/robot-en-ligne]
+    paths: [.github/workflows/essai-tuneps.yml]
+jobs:
+  essai:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          AIA=$(echo | openssl s_client -connect www.tuneps.tn:443 -servername www.tuneps.tn 2>/dev/null | openssl x509 -noout -ext authorityInfoAccess | grep -o 'CA Issuers - URI:[^ ]*' | sed 's/CA Issuers - URI://' | head -1)
+          curl -sS -o i.der "$AIA"; openssl x509 -inform DER -in i.der -out i.pem; cat /etc/ssl/certs/ca-certificates.crt i.pem > ca.pem
+          C="curl -sS -m 60 --cacert ca.pem -A Mozilla/5.0 -e https://www.tuneps.tn/portail/offres"
+          $C https://www.tuneps.tn/portail/offres -o idx.html; grep -o 'src="[^"]*\.js"' idx.html
+          for js in $(grep -o 'src="[^"]*main[^"]*\.js"' idx.html | sed 's/src="//;s/"//'); do $C "https://www.tuneps.tn/$js" -o main.js; done
+          ls -la main.js
+          python3 - <<'PY'
+          import re
+          t=open('main.js',encoding='utf-8',errors='ignore').read()
+          for k in ['downloadFile','downloadFromGed','noderef','nodeRef']:
+              for m in list(re.finditer(re.escape(k),t))[:4]:
+                  print('##',k,'::',re.sub(r'\s+',' ',t[max(0,m.start()-250):m.start()+350])); print()
+          PY
+          R='d05a7692-e5be-413e-9134-3ce09acd5049;1.0'; R0='d05a7692-e5be-413e-9134-3ce09acd5049'
+          for u in "api2/ged/document/downloadFile?noderef=$R" "api2/ged/document/downloadFile?noderef=$R0" "api2/ged/document/downloadFile?nodeRef=$R" "api2/ged/document/downloadFile?noderef=workspace://SpacesStore/$R0"; do
+            echo "=== $u"; $C -G "https://www.tuneps.tn/${u%%\?*}" --data-urlencode "${u#*\?}" -D h.txt -o b.bin -w "HTTP %{http_code} %{size_download}\n"; grep -i content-type h.txt; head -c 200 b.bin; echo
+          done
