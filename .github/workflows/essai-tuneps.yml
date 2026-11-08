@@ -6,12 +6,20 @@ jobs:
   essai:
     runs-on: ubuntu-latest
     steps:
+      - name: Certificat intermediaire de TUNEPS
+        run: |
+          echo | openssl s_client -connect www.tuneps.tn:443 -servername www.tuneps.tn -showcerts 2>/dev/null | openssl x509 -noout -subject -issuer -ext authorityInfoAccess
+          AIA=$(echo | openssl s_client -connect www.tuneps.tn:443 -servername www.tuneps.tn 2>/dev/null | openssl x509 -noout -ext authorityInfoAccess | grep -o 'CA Issuers - URI:[^ ]*' | sed 's/CA Issuers - URI://' | head -1)
+          echo "AIA=$AIA"
+          curl -sS -m 30 -o inter.der "$AIA"
+          (openssl x509 -inform DER -in inter.der -out inter.pem 2>/dev/null || cp inter.der inter.pem)
+          openssl x509 -in inter.pem -noout -subject -issuer
+          cat /etc/ssl/certs/ca-certificates.crt inter.pem > ca.pem
       - name: Joindre TUNEPS
         run: |
           for no in S20261100936 S20261100955 S20261101168; do
             for u in "https://www.tuneps.tn/api2/ged/spShopAttachFile/getByShopNo?shopNo=$no" "https://www.tuneps.tn/api2/ged//vAttachFile/getByBidNo?bidNo=$no"; do
               echo "=== $u"
-              curl -sS -m 40 -A "Mozilla/5.0" -w "\nHTTP %{http_code}\n" "$u" | head -c 1500; echo
+              curl -sS -m 40 --cacert ca.pem -A "Mozilla/5.0" -w "\nHTTP %{http_code}\n" "$u" | head -c 2500; echo
             done
           done
-          echo "=== page d'accueil"; curl -sS -m 40 -o /dev/null -w "HTTP %{http_code}\n" https://www.tuneps.tn/
