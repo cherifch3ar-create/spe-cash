@@ -80,6 +80,41 @@ def ecrire(rows):
            {"Prefer": "resolution=merge-duplicates,return=minimal"})
 
 
+import os
+
+
+def gemini_trier(articles_dict):
+    """Si la clé GEMINI_API_KEY est présente (secret GitHub du directeur), Gemini note chaque nouveauté
+    (pertinence 0-100 pour SPE) et écrit un résumé d'une ligne en français. Sans clé ou en cas d'erreur : rien ne change."""
+    cle = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not cle or not articles_dict:
+        return
+    modele = os.environ.get("GEMINI_MODELE", "gemini-flash-latest")
+    items = list(articles_dict.items())
+    for i in range(0, len(items), 25):
+        lot = items[i:i + 25]
+        liste = "\n".join("%d. [%s] %s — %s" % (n, v["metier"], v["titre"], v.get("resume", "")[:200]) for n, (k, v) in enumerate(lot))
+        consigne = ("Tu aides Soft Power Elevation (SPE), PME tunisienne de service : ascenseurs, électricité et éclairage public, "
+                    "portails automatiques, vidéosurveillance et alarmes, climatisation, mécanique, maritime, construction métallique, peinture. "
+                    "Pour chaque article, donne la pertinence pour trouver du travail ou des appels d'offres pour SPE (0 à 100) "
+                    "et un résumé d'une ligne en français. Réponds UNIQUEMENT en JSON : [{\"n\":0,\"pertinence\":80,\"resume\":\"...\"}].\n\n" + liste)
+        corps = {"contents": [{"parts": [{"text": consigne}]}], "generationConfig": {"responseMimeType": "application/json", "temperature": 0.2}}
+        url = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent" % modele
+        try:
+            req = urllib.request.Request(url, data=json.dumps(corps).encode(), method="POST",
+                                         headers={"Content-Type": "application/json", "x-goog-api-key": cle})
+            with urllib.request.urlopen(req, timeout=60) as r:
+                rep = json.loads(r.read())
+            texte = rep["candidates"][0]["content"]["parts"][0]["text"]
+            for e in json.loads(texte):
+                k, v = lot[int(e["n"])]
+                v["pertinence"] = int(e.get("pertinence", 0))
+                v["resume_ia"] = str(e.get("resume", ""))[:300]
+        except Exception as ex:
+            print("Gemini indisponible pour ce lot :", type(ex).__name__)
+            return
+
+
 def main(essai=False):
     t = int(time.time() * 1000)
     trouves, erreurs = {}, 0
@@ -96,6 +131,11 @@ def main(essai=False):
         time.sleep(2)
     vus = deja_vus(list(trouves)) if trouves and not essai else set()
     nouveaux = {k: v for k, v in trouves.items() if k not in vus}
+    gemini_trier(nouveaux)
+    if any("pertinence" in v for v in nouveaux.values()):
+        avant = len(nouveaux)
+        nouveaux = {k: v for k, v in nouveaux.items() if v.get("pertinence", 100) >= int(os.environ.get("PERTINENCE_MIN", "40"))}
+        print("Gemini : %d gardés sur %d" % (len(nouveaux), avant))
     print("articles lus :", len(trouves), "nouveaux :", len(nouveaux), "erreurs :", erreurs)
     if essai:
         for k, v in list(nouveaux.items())[:10]:
@@ -106,8 +146,8 @@ def main(essai=False):
                           type="veille_google")} for k, v in nouveaux.items()]
     if nouveaux:
         par = {}
-        for v in nouveaux.values():
-            par.setdefault(v["metier"], []).append(v["titre"])
+        for v in sorted(nouveaux.values(), key=lambda x: -x.get("pertinence", 0)):
+            par.setdefault(v["metier"], []).append(v.get("resume_ia") or v["titre"])
         lignes = ["🔎 Veille du %s : %d nouveauté(s) trouvée(s) par le robot" % (time.strftime("%d/%m %H:%M", time.gmtime(t / 1000 + 3600)), len(nouveaux))]
         for m, ts in par.items():
             lignes.append("• %s : %s" % (m, ts[0][:110] + (" (+%d)" % (len(ts) - 1) if len(ts) > 1 else "")))
