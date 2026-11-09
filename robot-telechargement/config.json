@@ -7,5 +7,26 @@
   "supabase_url": "https://djvygsbdwcoyldujrezq.supabase.co",
   "supabase_cle_publique": "sb_publishable_c_LW07RXjWmU_KctUhrg6w_m8Kg6AJ8",
   "bucket": "appels-offres",
-  "envoyer_en_ligne": true
+  "envoyer_en_ligne": true,
+  "zones": [
+    "Tunis",
+    "Ariana",
+    "Ben Arous",
+    "Manouba",
+    "Marsa",
+    "Goulette",
+    "Radès",
+    "Rades",
+    "Bizerte",
+    "Menzel Bourguiba",
+    "Nabeul",
+    "Hammamet",
+    "تونس",
+    "أريانة",
+    "بن عروس",
+    "منوبة",
+    "بنزرت",
+    "نابل",
+    "الحمامات"
+  ]
 }

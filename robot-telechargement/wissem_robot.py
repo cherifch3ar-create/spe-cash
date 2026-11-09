@@ -80,6 +80,11 @@ def sb_offres_a_telecharger(maxi):
             continue
         if ((d.get("telechargement") or {}).get("statut")) == "complet":
             continue
+        zones = CONFIG.get("zones") or []
+        if zones:  # décision du directeur (09/11/2026) : seulement les zones choisies
+            lieu = " ".join(str(d.get(k, "")) for k in ("gouvernorat", "lieu", "acheteur", "objet")).lower()
+            if not any(z.lower() in lieu for z in zones):
+                continue
         L.append({"no": d.get("no") or row["id"], "lien": lien, "limite": d.get("limite", "")})
         if len(L) >= maxi:
             break
