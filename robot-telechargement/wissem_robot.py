@@ -37,7 +37,7 @@ SB_ENTETES = {"apikey": SB_CLE, "Authorization": "Bearer " + SB_CLE, "Content-Ty
 EXTENSIONS = (".pdf", ".zip", ".rar", ".7z", ".doc", ".docx", ".xls", ".xlsx", ".odt", ".ods", ".jpg", ".jpeg", ".png", ".dwg")
 MOTS_TELECHARGER = ("télécharger", "telecharger", "download", "تحميل", "cahier", "fiche de visite", "fiche visite", "avis", "dossier", "pièce", "piece", "annexe")
 MOTS_CONNEXION = ("mot de passe", "password", "code pin", "tntrust", "certificat", "se connecter", "connexion", "authentification", "login")
-MOTS_INACTIVITE = ("inactivité", "inactivite", "session va expirer", "session expire")
+MOTS_INACTIVITE = ("inactivité", "inactivite", "inactif depuis", "vous êtes inactif", "session va expirer", "session expire")
 
 
 def maintenant_ms():
