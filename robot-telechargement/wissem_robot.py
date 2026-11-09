@@ -252,7 +252,12 @@ def fermer_inactivite(page):
 
 
 def verifier_connexion(page):
-    """S'arrête si TUNEPS demande une connexion (jamais de saisie)."""
+    """Si TUNEPS affiche « Se connecter », cliquer une fois ; s'il demande un code ou un mot de passe : s'arrêter (jamais de saisie)."""
+    if not session_ouverte(page) and not page.locator("input[type=password]").count():
+        if not deja_signale("clic_connexion", 0.15):  # au plus un clic toutes les ~9 minutes
+            cliquer_se_connecter(page)
+        if not session_ouverte(page):
+            raise Deconnecte("TUNEPS reste sur « Se connecter » (la clé TnTrust demande peut-être votre code)")
     try:
         if page.locator("input[type=password]").count():
             raise Deconnecte("TUNEPS demande un mot de passe")
@@ -263,6 +268,81 @@ def verifier_connexion(page):
     url = page.url.lower()
     if any(m in url for m in ("login", "connexion", "authentification", "/auth")):
         raise Deconnecte("TUNEPS affiche la page de connexion")
+
+
+def _cliquer_texte(page, motif, dernier=False):
+    loc = page.get_by_text(re.compile(motif, re.I))
+    n = loc.count()
+    if not n:
+        return False
+    (loc.nth(n - 1) if dernier else loc.first).click(timeout=5000)
+    return True
+
+
+def _cliquer_bouton(page, motif):
+    """Clique le dernier bouton visible et actif dont le texte correspond (ex. « Se connecter » du formulaire)."""
+    loc = page.get_by_role("button", name=re.compile(motif, re.I))
+    for k in range(loc.count() - 1, -1, -1):
+        b = loc.nth(k)
+        try:
+            if b.is_visible() and b.is_enabled():
+                b.click(timeout=5000)
+                return True
+        except Exception:
+            pass
+    return False
+
+
+def cliquer_se_connecter(page):
+    """Refait la connexion TUNEPS comme le directeur, avec la clé TnTrust déjà branchée sur le PC :
+    1) « Se connecter » ; 2) « Se connecter avec un certificat ID-Trust sur Token » ;
+    3) « Connexion de l'utilisateur » : choisir CHERIF BLIDI puis « Se connecter » ;
+    4) « Choisir Utilisateur » : choisir Blidi ascenseurs puis « Se Connecter ».
+    Ne tape JAMAIS de code : si un code PIN ou un mot de passe est demandé, la connexion échoue et le robot prévient."""
+    util = CONFIG.get("tuneps_utilisateur", "CHERIF BLIDI")
+    soc = CONFIG.get("tuneps_societe", "Blidi ascenseurs")
+    fait = False
+    for _ in range(6):
+        try:
+            if page.locator("input[type=password]").count():
+                return fait
+            if page.get_by_text(re.compile("Choisir Utilisateur", re.I)).count():
+                _cliquer_texte(page, re.escape(soc))
+                page.wait_for_timeout(800)
+                _cliquer_bouton(page, r"^\s*Se\s+connecter\s*$")
+                journal("TUNEPS : société « %s » choisie, « Se Connecter » cliqué" % soc)
+            elif page.get_by_text(re.compile("Connexion de l.utilisateur", re.I)).count():
+                _cliquer_texte(page, re.escape(util))
+                page.wait_for_timeout(800)
+                _cliquer_bouton(page, r"^\s*Se\s+connecter\s*$")
+                journal("TUNEPS : certificat « %s » choisi, « Se connecter » cliqué" % util)
+            elif page.get_by_text(re.compile(r"certificat\s+ID-?Trust", re.I)).count():
+                _cliquer_texte(page, r"certificat\s+ID-?Trust")
+                journal("TUNEPS : « Se connecter avec un certificat ID-Trust sur Token » cliqué")
+            elif page.get_by_text(re.compile(r"^\s*Se connecter\s*$", re.I)).count():
+                _cliquer_texte(page, r"^\s*Se connecter\s*$")
+                journal("TUNEPS : « Se connecter » cliqué")
+            else:
+                break
+            fait = True
+            page.wait_for_timeout(4000)  # laisser le temps à la clé TnTrust et à TUNEPS
+            fermer_inactivite(page)
+        except Exception as ex:
+            journal("TUNEPS : étape de connexion impossible (%s)" % type(ex).__name__)
+            break
+    return fait
+
+
+def session_ouverte(page):
+    """Vrai si TUNEPS n'affiche plus « Se connecter » ni de champ mot de passe."""
+    try:
+        if page.locator("input[type=password]").count():
+            return False
+        if page.get_by_text(re.compile(r"certificat\s+ID-?Trust|Connexion de l.utilisateur|Choisir Utilisateur", re.I)).count():
+            return False
+        return not page.get_by_text(re.compile(r"^\s*Se connecter\s*$", re.I)).count()
+    except Exception:
+        return True
 
 
 def liens_pieces(page):
