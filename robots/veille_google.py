@@ -13,23 +13,29 @@ CLE = "sb_publishable_c_LW07RXjWmU_KctUhrg6w_m8Kg6AJ8"
 H = {"apikey": CLE, "Authorization": "Bearer " + CLE, "Content-Type": "application/json"}
 
 RECHERCHES = [
-    ("Ascenseurs", "appel d'offres ascenseur Tunisie"),
-    ("Ascenseurs", "maintenance ascenseurs Tunisie"),
-    ("Ascenseurs", "projet résidence immeuble Tunisie ascenseurs"),
-    ("Électrique", "appel d'offres éclairage public Tunisie"),
-    ("Électrique", "STEG appel d'offres travaux"),
-    ("Surveillance, alarme, incendie", "appel d'offres vidéosurveillance Tunisie"),
-    ("Portail", "portail automatique barrière appel d'offres Tunisie"),
-    ("Chaud, froid, climatisation", "appel d'offres climatisation chauffage Tunisie"),
-    ("Maritime", "port Tunisie travaux maintenance appel d'offres OMMP"),
-    ("Mécanique", "maintenance industrielle Tunisie appel d'offres"),
-    ("Nouveautés", "hôtel clinique hôpital nouveau projet Tunisie 2026"),
+    # (métier, recherche, langue) — recherches courtes = plus de résultats
+    ("Ascenseurs", "ascenseur Tunisie", "fr"),
+    ("Ascenseurs", "ascenseurs maintenance Tunisie", "fr"),
+    ("Appels d'offres", "appel d'offres Tunisie", "fr"),
+    ("Appels d'offres", "طلب عروض تونس", "ar"),
+    ("Appels d'offres", "صفقة عمومية صيانة تونس", "ar"),
+    ("Électrique", "éclairage public Tunisie", "fr"),
+    ("Électrique", "STEG travaux", "fr"),
+    ("Surveillance, alarme, incendie", "vidéosurveillance Tunisie", "fr"),
+    ("Portail", "portail automatique Tunisie", "fr"),
+    ("Chaud, froid, climatisation", "climatisation Tunisie projet", "fr"),
+    ("Maritime", "port Radès travaux", "fr"),
+    ("Maritime", "OMMP Tunisie", "fr"),
+    ("Nouveautés", "projet immobilier Tunisie", "fr"),
+    ("Nouveautés", "nouvel hôpital Tunisie", "fr"),
+    ("Nouveautés", "hôtel Tunisie rénovation", "fr"),
+    ("Nouveautés", "مشروع بناء تونس مصعد", "ar"),
 ]
 
 
-def rss(q):
+def rss(q, lang="fr"):
     url = "https://news.google.com/rss/search?" + urllib.parse.urlencode(
-        {"q": q + " when:7d", "hl": "fr", "gl": "TN", "ceid": "TN:fr"})
+        {"q": q + " when:14d", "hl": lang, "gl": "TN", "ceid": "TN:" + lang})
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (SPE-veille)"})
     with urllib.request.urlopen(req, timeout=30) as r:
         return r.read()
@@ -77,9 +83,9 @@ def ecrire(rows):
 def main(essai=False):
     t = int(time.time() * 1000)
     trouves, erreurs = {}, 0
-    for metier, q in RECHERCHES:
+    for metier, q, lang in RECHERCHES:
         try:
-            for a in articles(rss(q)):
+            for a in articles(rss(q, lang)):
                 k = "G-" + hashlib.sha1(a["lien"].encode()).hexdigest()[:16]
                 if k not in trouves:
                     a.update({"metier": metier, "recherche": q})
