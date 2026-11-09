@@ -393,6 +393,14 @@ def pieces_par_api(page, no, dossier, presents):
             while pile:
                 x = pile.pop()
                 if isinstance(x, dict):
+                    # TUNEPS : chaque pièce a un « noderef » et un nom de fichier ;
+                    # adresse de téléchargement (trouvée par Yassine le 09/11) : /api2/ged/document/downloadFile?noderef=<ref>&fileName=<nom>
+                    bas = {k.lower(): v for k, v in x.items() if isinstance(v, (str, int))}
+                    ref = next((str(v) for k, v in bas.items() if "noderef" in k or k in ("ref", "nodeid", "node_ref", "docref", "documentref")), None)
+                    nom = next((str(v) for k, v in bas.items() if k in ("filename", "file_name", "nomfichier", "name", "nom", "docname", "documentname", "originalfilename")), None)
+                    if ref:
+                        from urllib.parse import quote
+                        urls.append(base + "/api2/ged/document/downloadFile?noderef=" + quote(ref, safe="") + "&fileName=" + quote(nom or "piece.pdf", safe=""))
                     pile.extend(x.values())
                 elif isinstance(x, list):
                     pile.extend(x)
@@ -405,7 +413,9 @@ def pieces_par_api(page, no, dossier, presents):
                     r = page.context.request.get(u, timeout=60000)
                     if not r.ok:
                         continue
-                    nom = u.split("/")[-1].split("?")[0] or "piece"
+                    from urllib.parse import urlparse, parse_qs, unquote
+                    q = parse_qs(urlparse(u).query)
+                    nom = unquote((q.get("fileName") or q.get("filename") or [""])[0]) or u.split("/")[-1].split("?")[0] or "piece"
                     if nom in presents:
                         continue
                     cible = nom_libre(dossier, nom)
