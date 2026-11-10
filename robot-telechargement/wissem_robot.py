@@ -37,7 +37,7 @@ SB_ENTETES = {"apikey": SB_CLE, "Authorization": "Bearer " + SB_CLE, "Content-Ty
 EXTENSIONS = (".pdf", ".zip", ".rar", ".7z", ".doc", ".docx", ".xls", ".xlsx", ".odt", ".ods", ".jpg", ".jpeg", ".png", ".dwg")
 MOTS_TELECHARGER = ("télécharger", "telecharger", "download", "تحميل", "cahier", "fiche de visite", "fiche visite", "avis", "dossier", "pièce", "piece", "annexe")
 MOTS_CONNEXION = ("mot de passe", "password", "code pin", "tntrust", "certificat", "se connecter", "connexion", "authentification", "login")
-MOTS_INACTIVITE = ("inactivité", "inactivite", "session va expirer", "session expire")
+MOTS_INACTIVITE = ("inactivité", "inactivite", "inactif depuis", "vous êtes inactif", "session va expirer", "session expire")
 
 
 def maintenant_ms():
@@ -80,6 +80,11 @@ def sb_offres_a_telecharger(maxi):
             continue
         if ((d.get("telechargement") or {}).get("statut")) == "complet":
             continue
+        zones = CONFIG.get("zones") or []
+        if zones:  # décision du directeur (09/11/2026) : seulement les zones choisies
+            lieu = " ".join(str(d.get(k, "")) for k in ("gouvernorat", "lieu", "acheteur", "objet")).lower()
+            if not any(z.lower() in lieu for z in zones):
+                continue
         L.append({"no": d.get("no") or row["id"], "lien": lien, "limite": d.get("limite", "")})
         if len(L) >= maxi:
             break
@@ -247,7 +252,12 @@ def fermer_inactivite(page):
 
 
 def verifier_connexion(page):
-    """S'arrête si TUNEPS demande une connexion (jamais de saisie)."""
+    """Si TUNEPS affiche « Se connecter », cliquer une fois ; s'il demande un code ou un mot de passe : s'arrêter (jamais de saisie)."""
+    if not session_ouverte(page) and not page.locator("input[type=password]").count():
+        if not deja_signale("clic_connexion", 0.15):  # au plus un clic toutes les ~9 minutes
+            cliquer_se_connecter(page)
+        if not session_ouverte(page):
+            raise Deconnecte("TUNEPS reste sur « Se connecter » (la clé TnTrust demande peut-être votre code)")
     try:
         if page.locator("input[type=password]").count():
             raise Deconnecte("TUNEPS demande un mot de passe")
@@ -258,6 +268,81 @@ def verifier_connexion(page):
     url = page.url.lower()
     if any(m in url for m in ("login", "connexion", "authentification", "/auth")):
         raise Deconnecte("TUNEPS affiche la page de connexion")
+
+
+def _cliquer_texte(page, motif, dernier=False):
+    loc = page.get_by_text(re.compile(motif, re.I))
+    n = loc.count()
+    if not n:
+        return False
+    (loc.nth(n - 1) if dernier else loc.first).click(timeout=5000)
+    return True
+
+
+def _cliquer_bouton(page, motif):
+    """Clique le dernier bouton visible et actif dont le texte correspond (ex. « Se connecter » du formulaire)."""
+    loc = page.get_by_role("button", name=re.compile(motif, re.I))
+    for k in range(loc.count() - 1, -1, -1):
+        b = loc.nth(k)
+        try:
+            if b.is_visible() and b.is_enabled():
+                b.click(timeout=5000)
+                return True
+        except Exception:
+            pass
+    return False
+
+
+def cliquer_se_connecter(page):
+    """Refait la connexion TUNEPS comme le directeur, avec la clé TnTrust déjà branchée sur le PC :
+    1) « Se connecter » ; 2) « Se connecter avec un certificat ID-Trust sur Token » ;
+    3) « Connexion de l'utilisateur » : choisir CHERIF BLIDI puis « Se connecter » ;
+    4) « Choisir Utilisateur » : choisir Blidi ascenseurs puis « Se Connecter ».
+    Ne tape JAMAIS de code : si un code PIN ou un mot de passe est demandé, la connexion échoue et le robot prévient."""
+    util = CONFIG.get("tuneps_utilisateur", "CHERIF BLIDI")
+    soc = CONFIG.get("tuneps_societe", "Blidi ascenseurs")
+    fait = False
+    for _ in range(6):
+        try:
+            if page.locator("input[type=password]").count():
+                return fait
+            if page.get_by_text(re.compile("Choisir Utilisateur", re.I)).count():
+                _cliquer_texte(page, re.escape(soc))
+                page.wait_for_timeout(800)
+                _cliquer_bouton(page, r"^\s*Se\s+connecter\s*$")
+                journal("TUNEPS : société « %s » choisie, « Se Connecter » cliqué" % soc)
+            elif page.get_by_text(re.compile("Connexion de l.utilisateur", re.I)).count():
+                _cliquer_texte(page, re.escape(util))
+                page.wait_for_timeout(800)
+                _cliquer_bouton(page, r"^\s*Se\s+connecter\s*$")
+                journal("TUNEPS : certificat « %s » choisi, « Se connecter » cliqué" % util)
+            elif page.get_by_text(re.compile(r"certificat\s+ID-?Trust", re.I)).count():
+                _cliquer_texte(page, r"certificat\s+ID-?Trust")
+                journal("TUNEPS : « Se connecter avec un certificat ID-Trust sur Token » cliqué")
+            elif page.get_by_text(re.compile(r"^\s*Se connecter\s*$", re.I)).count():
+                _cliquer_texte(page, r"^\s*Se connecter\s*$")
+                journal("TUNEPS : « Se connecter » cliqué")
+            else:
+                break
+            fait = True
+            page.wait_for_timeout(4000)  # laisser le temps à la clé TnTrust et à TUNEPS
+            fermer_inactivite(page)
+        except Exception as ex:
+            journal("TUNEPS : étape de connexion impossible (%s)" % type(ex).__name__)
+            break
+    return fait
+
+
+def session_ouverte(page):
+    """Vrai si TUNEPS n'affiche plus « Se connecter » ni de champ mot de passe."""
+    try:
+        if page.locator("input[type=password]").count():
+            return False
+        if page.get_by_text(re.compile(r"certificat\s+ID-?Trust|Connexion de l.utilisateur|Choisir Utilisateur", re.I)).count():
+            return False
+        return not page.get_by_text(re.compile(r"^\s*Se connecter\s*$", re.I)).count()
+    except Exception:
+        return True
 
 
 def liens_pieces(page):
@@ -308,6 +393,14 @@ def pieces_par_api(page, no, dossier, presents):
             while pile:
                 x = pile.pop()
                 if isinstance(x, dict):
+                    # TUNEPS : chaque pièce a un « noderef » et un nom de fichier ;
+                    # adresse de téléchargement (trouvée par Yassine le 09/11) : /api2/ged/document/downloadFile?noderef=<ref>&fileName=<nom>
+                    bas = {k.lower(): v for k, v in x.items() if isinstance(v, (str, int))}
+                    ref = next((str(v) for k, v in bas.items() if "noderef" in k or k in ("ref", "nodeid", "node_ref", "docref", "documentref")), None)
+                    nom = next((str(v) for k, v in bas.items() if k in ("filename", "file_name", "nomfichier", "name", "nom", "docname", "documentname", "originalfilename")), None)
+                    if ref:
+                        from urllib.parse import quote
+                        urls.append(base + "/api2/ged/document/downloadFile?noderef=" + quote(ref, safe="") + "&fileName=" + quote(nom or "piece.pdf", safe=""))
                     pile.extend(x.values())
                 elif isinstance(x, list):
                     pile.extend(x)
@@ -320,7 +413,9 @@ def pieces_par_api(page, no, dossier, presents):
                     r = page.context.request.get(u, timeout=60000)
                     if not r.ok:
                         continue
-                    nom = u.split("/")[-1].split("?")[0] or "piece"
+                    from urllib.parse import urlparse, parse_qs, unquote
+                    q = parse_qs(urlparse(u).query)
+                    nom = unquote((q.get("fileName") or q.get("filename") or [""])[0]) or u.split("/")[-1].split("?")[0] or "piece"
                     if nom in presents:
                         continue
                     cible = nom_libre(dossier, nom)
