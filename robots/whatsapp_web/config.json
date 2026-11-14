@@ -1,0 +1,14 @@
+{
+  "supabase_url": "https://djvygsbdwcoyldujrezq.supabase.co",
+  "supabase_cle_publique": "sb_publishable_c_LW07RXjWmU_KctUhrg6w_m8Kg6AJ8",
+  "groupes": {
+    "appel d'offre SPE": true, "AO SPE Électrique": true, "AO SPE Mécanique": true, "AO SPE Portail": true,
+    "AO SPE Surveillance caméra et alarme": true, "AO SPE Métal construction": true, "AO SPE Peinture": true,
+    "AO SPE Maritime": true, "AO SPE Engins, levage et hydraulique": true, "SPE Réunion agents": true
+  },
+  "groupe_par_defaut": "appel d'offre SPE",
+  "pause_secondes": 60,
+  "max_par_passage": 10,
+  "heures_silence": [23, 7],
+  "intervalle_minutes": 10
+}

@@ -1,0 +1,20 @@
+name: Robot affiches (24 h/24)
+# Compose une affiche par offre active (image du métier + logo SPE + titre, lieu, date limite) et la met en brouillon.
+on:
+  schedule:
+    - cron: "41 * * * *"
+  workflow_dispatch:
+    inputs:
+      max: { description: "Nombre maximum d'affiches", default: "10" }
+permissions: { contents: read }
+concurrency: { group: robot-affiches, cancel-in-progress: false }
+jobs:
+  affiches:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install pillow
+      - run: python robots/affiches.py --max "${{ github.event.inputs.max || '10' }}"

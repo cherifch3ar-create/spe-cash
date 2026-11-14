@@ -15,3 +15,8 @@ Il n'existait aucun dépôt ni dossier nommé SPACE WORK : celui-ci devient l'en
 
 Règles du dossier : rien ici ne remplace un projet existant (Workspace, SPE Live, robots) ; on y écrit
 les décisions et les plans, et les robots nouveaux vont dans `robots/` du dépôt après accord.
+
+| `../robots/affiches.py` (+ workflow `robot-affiches.yml`) | Robot affiches : une affiche en brouillon par offre active, toutes les heures. |
+| `../robots/superviseur.py` (+ `robot-superviseur.yml`) | Robot superviseur : santé des robots + relance des `agent_tasks`, toutes les heures. |
+| `../robots/telegram_file.py` (+ `robot-telegram.yml`) | Canal de secours Telegram (officiel, gratuit) : actif dès que le secret `TELEGRAM_BOT_TOKEN` existe et que `telegram_groupes.json` est rempli. |
+| `../robots/whatsapp_web/` | Robot WhatsApp Web pour une machine toujours allumée (numéro dédié) : `install.sh`, `index.js`, `config.json`. Non testé depuis le cloud. |

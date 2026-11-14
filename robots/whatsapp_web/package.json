@@ -1,0 +1,9 @@
+{
+  "name": "spe-whatsapp-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Robot WhatsApp Web SPE : envoie la file file_whatsapp (Supabase) dans les groupes par métier.",
+  "main": "index.js",
+  "scripts": { "start": "node index.js" },
+  "dependencies": { "whatsapp-web.js": "1.26.0", "qrcode-terminal": "0.12.0" }
+}

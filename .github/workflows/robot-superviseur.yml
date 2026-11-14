@@ -1,0 +1,18 @@
+name: Robot superviseur (24 h/24)
+# Vérifie chaque heure que les robots passent à l'heure, relance les tâches d'agents en erreur, écrit une ligne dans events.
+on:
+  schedule:
+    - cron: "53 * * * *"
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  superviseur:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - env:
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python robots/superviseur.py
