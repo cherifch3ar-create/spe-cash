@@ -24,3 +24,13 @@ en bas au centre, en blanc : "<accroche en derja>" en gros et gras, "<traduction
 
 ## Contrôle avant publication (Youssef, Leila)
 Comparer à la référence point par point ; si un seul critère manque : ne pas publier, redemander une fois, sinon abandonner.
+
+## Série déjà publiée sur la page Facebook (captures du 14/11/2026, dossier `reference/`)
+Trois publications « Vidéosurveillance » (29 oct. → 10 nov.) montrent que ce niveau est déjà atteint et que la mise en page
+est toujours la même : logo SPE en haut à gauche, scène tunisienne réaliste au crépuscule, produit visible (caméra bullet
+posée par un technicien, caméra dôme sur mât devant un site industriel, maison de Sidi Bou Saïd), texte en bas sur trois
+lignes (derja, français, catégorie avec trait doré). Ces trois images et l'affiche « Alarme commerce » forment la référence.
+
+Un seul écart relevé dans la série publiée : le statut de la publication « caméra bullet » contient le hashtag
+`#Hikvision` (nom de marque). La charte l'interdit dans l'image ET dans le statut : à ne plus reproduire.
+Le numéro +216 56 537 838 dans le statut est le vrai numéro de contact SPE : autorisé dans le texte, jamais dans l'image.
