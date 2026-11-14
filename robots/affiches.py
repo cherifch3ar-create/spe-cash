@@ -60,10 +60,10 @@ def police(taille, gras=True):
 
 
 def sans_arabe(s):
-    """Garde la partie française d'un objet bilingue (« Objet (الموضوع) »)."""
-    s = re.sub(r"[؀-ۿݐ-ݿ]+", "", str(s or ""))
-    s = re.sub(r"\(\s*\)", "", s)
-    return re.sub(r"\s+", " ", s).strip(" -–—:") or str(s or "")
+    """Garde la partie française d'un texte bilingue ; vide si le texte est seulement en arabe."""
+    s2 = re.sub(r"[\u0600-\u06FF\u0750-\u077F\uFE70-\uFEFF]+", "", str(s or ""))
+    s2 = re.sub(r"\(\s*\)", "", s2)
+    return re.sub(r"\s+", " ", s2).strip(" -–—:·,")
 
 
 def metier_de(offre):
@@ -116,9 +116,9 @@ def composer(offre):
     # voile sombre en bas pour la lisibilité (charte : texte blanc sur zone sombre)
     voile = Image.new("RGBA", (W, HT), (0, 0, 0, 0))
     vd = ImageDraw.Draw(voile)
-    for i in range(520):
-        a = int(230 * (i / 520) ** 1.6)
-        vd.line([(0, HT - 520 + i), (W, HT - 520 + i)], fill=(8, 20, 40, a))
+    for i in range(640):
+        a = int(245 * (i / 640) ** 1.3)
+        vd.line([(0, HT - 640 + i), (W, HT - 640 + i)], fill=(8, 20, 40, a))
     fond = Image.alpha_composite(fond.convert("RGBA"), voile)
     d = ImageDraw.Draw(fond)
     # panneau logo bleu arrondi en haut à gauche (charte critère 5)
