@@ -1,0 +1,14 @@
+{
+  "_notice": "nom du groupe WhatsApp -> chat_id Telegram (nombre négatif pour un groupe, @nom pour une chaîne publique). '*' = chaîne par défaut pour tout ce qui n'a pas de groupe. À remplir après création du bot (BotFather) et ajout du bot comme administrateur.",
+  "*": "",
+  "appel d'offre SPE": "",
+  "AO SPE Électrique": "",
+  "AO SPE Mécanique": "",
+  "AO SPE Portail": "",
+  "AO SPE Surveillance caméra et alarme": "",
+  "AO SPE Métal construction": "",
+  "AO SPE Peinture": "",
+  "AO SPE Maritime": "",
+  "AO SPE Engins, levage et hydraulique": "",
+  "SPE Réunion agents": ""
+}
