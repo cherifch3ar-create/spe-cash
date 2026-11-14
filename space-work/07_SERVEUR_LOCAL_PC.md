@@ -39,3 +39,16 @@ lancements manuels, eux, marchent à chaque fois. Conséquence : **le serveur lo
 tous les robots, y compris ceux « en ligne » ; GitHub reste la roue de secours. Le script d'installation installe donc
 aussi les robots affiches, pièces en ligne et veille Google en tâches Windows (double passage sans risque : chaque robot
 ignore ce qui est déjà fait).
+
+## Pourquoi rien n'arrive sur WhatsApp (constat du 14/11, 16:10 Tunis) et la correction
+- Le robot WhatsApp du PC est **connecté** (il l'a dit à 09:18) et attend des fichiers dans `SPE_shared\outbox`.
+- Les agents Amine et Facteur, qui remplissent cet outbox, lisent la file de l'**ancienne base SPE Live** : elle est pleine
+  (100 Mo) et sa file est vide. Les 110 messages en attente sont dans **Supabase**, que personne ne lisait.
+- De plus, ces 110 messages sont **périmés** : 104 affiches d'offres expirées (29/10 → 03/11, pièces absentes) et 6 rapports
+  d'agents du 05–07/11. Il n'y avait donc rien de valable à envoyer.
+- Correction : `robots/pc/file_vers_outbox.py` (tâche Windows toutes les 10 min, installée par le script) lit la file
+  Supabase ET les affiches **validées** dans le Centre d'approbation, et dépose les fichiers dans l'outbox du robot du PC.
+  Règles : un message regroupé par groupe toutes les 3 h, 5 offres au plus, pas d'offre à moins de 3 jours, pas de message
+  de plus de 7 jours, jamais deux fois la même offre dans le même groupe, silence 23 h–7 h, menu des commandes en bas.
+- Chaîne complète désormais : offre → robot affiches (brouillon) → **validation par le directeur dans l'application** →
+  robot pont → outbox → robot WhatsApp du PC → groupe du métier.

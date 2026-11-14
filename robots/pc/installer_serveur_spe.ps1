@@ -66,6 +66,9 @@ if ($py) {
   Tache "SPE Robot pieces en ligne local" $py "`"$Repo\robot-telechargement\robot_en_ligne.py`" --max 40" $t3
   $t4 = New-ScheduledTaskTrigger -Once -At (Get-Date).Date.AddMinutes(17) -RepetitionInterval (New-TimeSpan -Hours 3) -RepetitionDuration (New-TimeSpan -Days 3650)
   Tache "SPE Robot veille Google local" $py "`"$Repo\robots\veille_google.py`"" $t4
+  # Pont file Supabase -> outbox du robot WhatsApp du PC (les agents lisent l'ancienne base, pleine : sans ce pont rien ne part).
+  $t5 = New-ScheduledTaskTrigger -Once -At (Get-Date).Date.AddMinutes(3) -RepetitionInterval (New-TimeSpan -Minutes 10) -RepetitionDuration (New-TimeSpan -Days 3650)
+  Tache "SPE Robot pont WhatsApp" $py "`"$Repo\robots\pc\file_vers_outbox.py`"" $t5
 } else { Note "ATTENTION : Python absent. L'installer puis relancer ce script." }
 
 # 5. Robot WhatsApp Web (Node.js requis : https://nodejs.org LTS). Tourne en continu, redémarre tout seul.
