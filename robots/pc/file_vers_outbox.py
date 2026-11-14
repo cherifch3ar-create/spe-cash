@@ -97,6 +97,10 @@ def main():
     # Affiches VALIDÉES dans le Centre d'approbation et pas encore envoyées : une image par offre dans le groupe du métier.
     try:
         aff = sb("GET", "/rest/v1/docs?collection=eq.affiches&select=id,data&data-%3E%3Estatut=eq.valide&order=maj.desc&limit=100") or []
+        # Décision du directeur (14/11/2026, « j'attends les messages WhatsApp avec les photos ») : les affiches du ROBOT
+        # (cree_par robot_affiches, contrôles tous OK) partent d'elles-mêmes après 1 h en brouillon si personne ne les a refusées.
+        brouillons = sb("GET", "/rest/v1/docs?collection=eq.affiches&select=id,data&data-%3E%3Estatut=eq.brouillon&data-%3E%3Ecree_par=eq.robot_affiches&order=maj.desc&limit=100") or []
+        aff += [r for r in brouillons if (r.get("data") or {}).get("t", 0) < ms() - 3600000 and all(c.get("ok") for c in (r.get("data") or {}).get("controles", []) if c.get("bloquant"))]
     except Exception as ex:
         aff = []; log("affiches non lisibles : %s" % ex)
     n_aff = 0
