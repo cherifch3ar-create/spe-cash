@@ -30,3 +30,12 @@ Tout le reste est écrit dans `events` et visible dans l'application (Diagnostic
 ## Sécurité du serveur local
 Un seul profil Chrome pour les robots, jamais celui du directeur ; aucun mot de passe dans les scripts ; le PC ne sert
 que SPE ; sauvegarde quotidienne de `01_SPE` (zip daté) à ajouter dans `_SAUVEGARDES` (Nabil, gardien des sauvegardes).
+
+## Constat du 14/11 (15:20 Tunis) : GitHub Actions n'est pas ponctuel
+Les horaires GitHub (« schedule ») sont retardés ou sautés quand le dépôt est peu actif : la veille Google est passée à
+01:28, 10:37 puis plus rien jusqu'à 14:20 au lieu de toutes les 3 h ; les nouveaux robots (affiches, superviseur,
+Telegram, pièces en ligne) n'ont eu aucun passage automatique dans les 3 heures qui ont suivi leur fusion. Les
+lancements manuels, eux, marchent à chaque fois. Conséquence : **le serveur local (PC) est la voie principale** pour
+tous les robots, y compris ceux « en ligne » ; GitHub reste la roue de secours. Le script d'installation installe donc
+aussi les robots affiches, pièces en ligne et veille Google en tâches Windows (double passage sans risque : chaque robot
+ignore ce qui est déjà fait).

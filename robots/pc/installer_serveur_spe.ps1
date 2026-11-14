@@ -59,6 +59,13 @@ if ($py) {
   }
   $t1 = New-ScheduledTaskTrigger -Once -At (Get-Date).Date.AddMinutes(27) -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration (New-TimeSpan -Days 3650)
   Tache "SPE Robot superviseur local" $py "`"$Repo\robots\superviseur.py`"" $t1
+  # Les robots en ligne tournent AUSSI ici : GitHub Actions retarde ou saute souvent les horaires (observé le 14/11 : veille toutes les 8 h au lieu de 3 h).
+  $t2 = New-ScheduledTaskTrigger -Once -At (Get-Date).Date.AddMinutes(41) -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration (New-TimeSpan -Days 3650)
+  Tache "SPE Robot affiches local" $py "`"$Repo\robots\affiches.py`" --max 10" $t2
+  $t3 = New-ScheduledTaskTrigger -Once -At (Get-Date).Date.AddMinutes(23) -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration (New-TimeSpan -Days 3650)
+  Tache "SPE Robot pieces en ligne local" $py "`"$Repo\robot-telechargement\robot_en_ligne.py`" --max 40" $t3
+  $t4 = New-ScheduledTaskTrigger -Once -At (Get-Date).Date.AddMinutes(17) -RepetitionInterval (New-TimeSpan -Hours 3) -RepetitionDuration (New-TimeSpan -Days 3650)
+  Tache "SPE Robot veille Google local" $py "`"$Repo\robots\veille_google.py`"" $t4
 } else { Note "ATTENTION : Python absent. L'installer puis relancer ce script." }
 
 # 5. Robot WhatsApp Web (Node.js requis : https://nodejs.org LTS). Tourne en continu, redémarre tout seul.
