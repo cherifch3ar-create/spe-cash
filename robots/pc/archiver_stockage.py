@@ -8,7 +8,8 @@ ne garde que ce qui sert encore.
  1. Liste les fichiers des buckets Supabase « appels-offres » et « blobs » (clé de service obligatoire).
  2. Copie chaque fichier absent sur le PC dans SPE_shared\\Archives\\supabase\\<bucket>\\<chemin>, puis contrôle la taille.
  3. Retire de Supabase SEULEMENT des fichiers dont la copie PC est contrôlée, dans cet ordre :
-      a. dossiers d'offres dont la date limite est passée depuis plus de 2 jours ;
+      a. dossiers d'offres terminées (date limite passée) — décision du directeur du 15/11/2026 :
+         « l'offre est finie : supprime directement, laisse l'historique dans le PC » ;
       b. fichiers déposés il y a plus de 60 jours ;
       c. zips « archives/ » (déjà copiés sur le PC) ;
       d. si Supabase dépasse encore le plafond (800 Mo par défaut) : les plus anciens dépôts d'abord.
@@ -138,7 +139,7 @@ def main():
     def no_offre(f): return f["chemin"].split("/")[0] if f["bucket"] == "appels-offres" else None
     def protege(f):
         n = no_offre(f); t = lim.get(n) if n else None
-        return bool(t and t > maint - 2 * JOUR and t < maint + 3 * JOUR) or "logo" in f["chemin"].lower()
+        return bool(t and t >= maint and t < maint + 3 * JOUR) or "logo" in f["chemin"].lower()
     retraits, vus = [], set()
     def ajouter(f, raison):
         k = (f["bucket"], f["chemin"])
@@ -146,7 +147,7 @@ def main():
         vus.add(k); f["raison"] = raison; retraits.append(f)
     for f in fichiers:
         n = no_offre(f); t = lim.get(n) if n else None
-        if t and t < maint - 2 * JOUR: ajouter(f, "date limite passée")
+        if t and t < maint: ajouter(f, "offre terminée (date limite passée)")
     for f in fichiers:
         if f["cree_ms"] < maint - 60 * JOUR: ajouter(f, "plus de 60 jours")
     for f in fichiers:

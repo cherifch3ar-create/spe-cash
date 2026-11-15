@@ -57,7 +57,7 @@ Le robot `robots/pc/archiver_stockage.py` tourne toutes les 2 heures sur le PC :
 
 1. Il copie chaque fichier Supabase dans `SPE_shared\Archives\supabase\` et contrôle la taille.
 2. Il retire de Supabase seulement les fichiers dont la copie PC est contrôlée, dans cet ordre :
-   - dossiers des offres dont la date limite est passée depuis plus de 2 jours ;
+   - dossiers des offres terminées, dès que la date limite est passée (décision du directeur du 15/11 : « l'offre est finie, supprime directement, laisse l'historique dans le PC ») ;
    - fichiers de plus de 60 jours ;
    - zips d'archives déjà copiés ;
    - si Supabase dépasse encore 800 Mo, les dépôts les plus anciens.
