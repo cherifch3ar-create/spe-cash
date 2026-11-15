@@ -10,7 +10,7 @@ qui envoie sur WhatsApp, ne lit que la file « file_whatsapp » de SPE Live. Ce 
   python pont_affiches_spelive.py preparer [--max 5] [--sortie DOSSIER]
       Choisit les affiches à envoyer, télécharge chaque PNG, le réduit en JPEG léger (~200 Ko),
       découpe le base64 en parties de 180 000 caractères et écrit dans DOSSIER :
-        lot_<k>.json   : liste d'écritures prêtes pour ArtifactData « batch » (50 au plus par lot)
+        lot_<k>.json   : liste d'écritures prêtes pour ArtifactData « batch » (3 affiches, 9 écritures par lot)
         plan.json      : [{no, doc_id, groupe, parts, octets}]
   python pont_affiches_spelive.py marquer --sortie DOSSIER
       Après écriture réussie dans SPE Live : note dans Supabase affiches/<N°>.envoye_wa = "en_file".
@@ -136,8 +136,9 @@ def preparer(a):
                                    "url": SB + "/storage/v1/object/public/blobs/" + pid, "no": no,
                                    "texte": legende(dict(d, no=no), o), "priorite": 2, "statut": "en_attente", "essais": 0}})
         plan.append({"no": no, "doc_id": doc_id, "groupe": g, "parts": len(parts), "octets": len(img)})
-    for i in range(0, len(ecritures), 40):
-        json.dump(ecritures[i:i + 40], open(os.path.join(a.sortie, "lot_%d.json" % (i // 40)), "w"), ensure_ascii=False)
+    # 9 écritures = 3 affiches par lot : reste sous la limite de 1 Mo d'un « batch » ArtifactData
+    for i in range(0, len(ecritures), 9):
+        json.dump(ecritures[i:i + 9], open(os.path.join(a.sortie, "lot_%d.json" % (i // 9)), "w"), ensure_ascii=False)
     json.dump(plan, open(os.path.join(a.sortie, "plan.json"), "w"), ensure_ascii=False, indent=1)
     print("%d affiches candidates, %d préparées (%d écritures) dans %s" % (len(choix), len(plan), len(ecritures), a.sortie))
     return 0
