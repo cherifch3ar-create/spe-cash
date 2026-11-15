@@ -1,4 +1,4 @@
-# ============================================================================
+﻿# ============================================================================
 #  SERVEUR LOCAL SPE — installation en une fois sur le PC du bureau (Windows 10/11)
 #  Clic droit > Exécuter avec PowerShell (en administrateur). Relançable sans risque : ne supprime rien.
 #  Ce que ça fait : 1) le PC ne dort jamais ; 2) Chrome SPE s'ouvre tout seul à chaque démarrage ;
