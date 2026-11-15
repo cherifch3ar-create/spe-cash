@@ -356,6 +356,68 @@ def publier(offre, png, categorie, essai, sortie):
     return "brouillon"
 
 
+GROUPES_WA = {"appel d'offre SPE", "AO SPE Électrique", "AO SPE Mécanique", "AO SPE Portail", "AO SPE Surveillance caméra et alarme",
+              "AO SPE Métal construction", "AO SPE Peinture", "AO SPE Maritime", "AO SPE Engins, levage et hydraulique"}
+GROUPE_PAR_METIER = {"Ascenseurs": "AO SPE Mécanique", "Portail": "AO SPE Portail", "Surveillance, alarme, incendie": "AO SPE Surveillance caméra et alarme",
+                     "Électrique": "AO SPE Électrique", "Variateurs et équipements industriels": "AO SPE Électrique", "Mécanique": "AO SPE Mécanique",
+                     "Métal construction": "AO SPE Métal construction", "Peinture": "AO SPE Peinture", "Maritime": "AO SPE Maritime",
+                     "Engins, levage et hydraulique": "AO SPE Engins, levage et hydraulique"}
+
+
+def groupe_wa(o):
+    g = o.get("groupe")
+    return g if g in GROUPES_WA else GROUPE_PAR_METIER.get(o.get("metier"), "appel d'offre SPE")
+
+
+def legende_wa(o, no):
+    """Modèle B (space-work/10) : légende courte sous l'affiche, comme l'exemple du directeur du 30/10."""
+    objet = sans_arabe(o.get("objet") or "")
+    if len(objet) > 140: objet = objet[:137].rsplit(" ", 1)[0] + "…"
+    lieu = str(o.get("gouvernorat") or o.get("lieu") or "").replace("(à confirmer)", "").strip()
+    j = jours(o)
+    l1 = "Une belle opportunité%s : le %s, %s." % ((" à " + lieu) if lieu and not nrm(lieu).startswith("a confirmer") else "", no,
+                                                   (objet[:1].lower() + objet[1:]) if objet else "voir l'affiche")
+    lim = o.get("limite") or ""
+    return (l1 + ("\nDate limite : %s%s." % (lim, " (J-%d)" % j if j is not None else "") if lim else "")
+            + "\nTout est dans l'application SPE.\n\nRépondez 2 + N° pour lancer l'étude.")
+
+
+def enfiler(o, png_id, essai):
+    """Met l'affiche dans la file WhatsApp Supabase (envoyée par le robot WhatsApp Web du PC). Identifiant fixe
+    « aff-<N°> » : jamais deux fois la même affiche. Seulement si l'offre a encore plus de 24 h."""
+    no = str(o.get("no"))
+    try:
+        if int(o.get("tri") or 0) < ms() + 86400000: return False
+    except (TypeError, ValueError): return False
+    if essai: return True
+    t = ms()
+    st, _ = sb("POST", "/rest/v1/docs?on_conflict=collection,id",
+               {"collection": "file_whatsapp", "id": "aff-" + no, "maj": t, "source": "robot_affiches",
+                "data": {"t": t, "agent": "affiches", "no": no, "type": "image", "groupe": groupe_wa(o), "destinataire": groupe_wa(o),
+                         "png": "/_blob/" + png_id, "nom_fichier": "affiche_%s.png" % no, "texte": legende_wa(o, no),
+                         "priorite": 2, "statut": "en_attente", "essais": 0}},
+               prefer="resolution=ignore-duplicates,return=minimal")
+    return True
+
+
+def enfiler_affiches_pretes(maxi, essai):
+    """Affiches robot au modèle carte, pas encore dans la file : on les y met (les plus urgentes d'abord)."""
+    st, aff = sb("GET", "/rest/v1/docs?collection=eq.affiches&select=id,data&data-%3E%3Emodele=eq.carte&limit=2000")
+    st, file = sb("GET", "/rest/v1/docs?collection=eq.file_whatsapp&select=id&id=like.aff-*&limit=5000")
+    deja = {r["id"][4:] for r in file}
+    n = 0
+    for r in sorted(aff, key=lambda r: (r["data"].get("donnees") or {}).get("limite_t") or 9e15):
+        d = r["data"]
+        if n >= maxi: break
+        if r["id"] in deja or d.get("envoye_wa") or d.get("statut") not in ("brouillon", "valide"): continue
+        if any(c.get("bloquant") and not c.get("ok") for c in d.get("controles") or []): continue
+        st, rows = sb("GET", "/rest/v1/docs?collection=eq.offres&select=data&id=eq." + urllib.parse.quote(r["id"]))
+        if not rows: continue
+        o = rows[0]["data"]; o.setdefault("no", r["id"])
+        if enfiler(o, d.get("png_id") or str(d.get("png", "")).rsplit("/", 1)[-1], essai): n += 1
+    return n
+
+
 def refaire_brouillons(maxi, essai, sortie):
     """Refait au modèle « carte » les affiches du ROBOT encore en brouillon et jamais envoyées (offre encore ouverte).
     Ne touche pas aux affiches validées, modifiées ou faites à la main ; l'ancienne image reste dans « historique »."""
@@ -388,9 +450,11 @@ def refaire_brouillons(maxi, essai, sortie):
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--max", type=int, default=10); ap.add_argument("--essai", action="store_true"); ap.add_argument("--sortie", default="")
+    ap.add_argument("--file", type=int, default=6, help="affiches carte à mettre dans la file WhatsApp par passage (0 = aucune)")
     ap.add_argument("--refaire", type=int, default=5, help="nombre de brouillons robot à refaire au modèle carte par passage (0 = aucun)")
     a = ap.parse_args()
     if a.refaire: log("%d brouillon(s) refait(s) au modèle carte" % refaire_brouillons(a.refaire, a.essai, a.sortie))
+    if a.file: log("%d affiche(s) mise(s) dans la file WhatsApp" % enfiler_affiches_pretes(a.file, a.essai))
     L = offres_sans_affiche(a.max)
     log("%d offre(s) sans affiche à traiter" % len(L))
     n, err = 0, 0

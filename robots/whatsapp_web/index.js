@@ -16,7 +16,8 @@ async function sb(method, chemin, corps, prefer) {
 }
 function silence() { const h = new Date().getHours(); const [a, b] = CFG.heures_silence; return a > b ? (h >= a || h < b) : (h >= a && h < b); }
 function lireEnvoyes() { try { return JSON.parse(fs.readFileSync(ENVOYES, 'utf8')); } catch { return {}; } }
-function cle(d, groupe) { const no = (d.no || (String(d.texte || '').match(/\b[S]?\d{11}\b/) || [''])[0]); return no ? no + '|' + groupe : ''; }
+// Clé anti-doublon : N° + groupe + type (l'annonce écrite ET l'affiche d'une même offre partent toutes les deux ; les tests ne bloquent rien).
+function cle(d, groupe) { if (d.test) return ''; const no = (d.no || (String(d.texte || '').match(/\b[S]?\d{11}\b/) || [''])[0]); return no ? no + '|' + groupe + '|' + (d.type || 'texte') : ''; }
 
 async function fichierDepuis(d) {
   const url = d.lien_pdf || d.lien_image || (d.png && d.png.startsWith('/_blob/') ? CFG.supabase_url + '/storage/v1/object/public/blobs/' + d.png.slice(7) : d.png);

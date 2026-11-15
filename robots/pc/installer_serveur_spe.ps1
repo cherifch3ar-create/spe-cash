@@ -77,7 +77,14 @@ if ($py) {
   Tache "SPE Robot veille Google local" $py "`"$Repo\robots\veille_google.py`"" $t4
   # Pont file Supabase -> outbox du robot WhatsApp du PC (les agents lisent l'ancienne base, pleine : sans ce pont rien ne part).
   $t5 = New-ScheduledTaskTrigger -Once -At (Get-Date).Date.AddMinutes(3) -RepetitionInterval (New-TimeSpan -Minutes 10) -RepetitionDuration (New-TimeSpan -Days 3650)
-  Tache "SPE Robot pont WhatsApp" $py "`"$Repo\robots\pc\file_vers_outbox.py`"" $t5
+  # Chemin unique (15/11/2026) : file Supabase -> robot WhatsApp Web (Node). Le pont vers l'ancienne outbox ne sert
+  # que si Node est absent ; sinon il marquerait « envoyé » des messages que le robot WhatsApp Web n'aurait pas vus.
+  if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+    Tache "SPE Robot pont WhatsApp" $py "`"$Repo\robots\pc\file_vers_outbox.py`"" $t5
+  } else {
+    Unregister-ScheduledTask -TaskName "SPE Robot pont WhatsApp" -Confirm:$false -ErrorAction SilentlyContinue
+    Note "Pont outbox non installé : le robot WhatsApp Web envoie directement la file Supabase."
+  }
   # Archivage (Option A du directeur, 15/11/2026) : le PC garde tous les fichiers, Supabase reste sous 800 Mo.
   # Nécessite la variable d'environnement SUPABASE_SERVICE_KEY (sinon le robot s'arrête sans rien toucher).
   $t6 = New-ScheduledTaskTrigger -Once -At (Get-Date).Date.AddMinutes(51) -RepetitionInterval (New-TimeSpan -Hours 2) -RepetitionDuration (New-TimeSpan -Days 3650)
