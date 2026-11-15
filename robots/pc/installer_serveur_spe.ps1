@@ -38,11 +38,14 @@ start "" "$chrome" --remote-debugging-port=9222 --user-data-dir="$Shared\ChromeS
 "@ | Set-Content -Path $ChromeBat -Encoding ASCII
   Note "Lancer-Chrome-SPE.bat créé (profil SPE Robots dans $Shared\ChromeSPE)."
 }
-function Tache($nom, $action, $args, $declencheur) {
-  $a = New-ScheduledTaskAction -Execute $action -Argument $args -WorkingDirectory $Shared
-  $s = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 2) -MultipleInstances IgnoreNew
-  Register-ScheduledTask -TaskName $nom -Action $a -Trigger $declencheur -Settings $s -RunLevel Highest -Force | Out-Null
-  Note "Tâche planifiée installée : $nom"
+# NB : ne jamais appeler un paramètre « $args » (variable réservée de PowerShell : la tâche n'était pas créée, 15/11/2026).
+function Tache([string]$nom, [string]$action, [string]$arguments, $declencheur) {
+  try {
+    $a = New-ScheduledTaskAction -Execute $action -Argument $arguments -WorkingDirectory $Shared -ErrorAction Stop
+    $s = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 2) -MultipleInstances IgnoreNew
+    Register-ScheduledTask -TaskName $nom -Action $a -Trigger $declencheur -Settings $s -RunLevel Highest -Force -ErrorAction Stop | Out-Null
+    Note "Tâche planifiée installée : $nom"
+  } catch { Note "ERREUR tâche « $nom » : $($_.Exception.Message)" }
 }
 $user = "$env:USERDOMAIN\$env:USERNAME"
 Tache "SPE Serveur - Chrome SPE au demarrage" "cmd.exe" "/c `"$ChromeBat`"" (New-ScheduledTaskTrigger -AtLogOn -User $user)
