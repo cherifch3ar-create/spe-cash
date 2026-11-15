@@ -69,6 +69,13 @@ if ($py) {
   # Pont file Supabase -> outbox du robot WhatsApp du PC (les agents lisent l'ancienne base, pleine : sans ce pont rien ne part).
   $t5 = New-ScheduledTaskTrigger -Once -At (Get-Date).Date.AddMinutes(3) -RepetitionInterval (New-TimeSpan -Minutes 10) -RepetitionDuration (New-TimeSpan -Days 3650)
   Tache "SPE Robot pont WhatsApp" $py "`"$Repo\robots\pc\file_vers_outbox.py`"" $t5
+  # Archivage (Option A du directeur, 15/11/2026) : le PC garde tous les fichiers, Supabase reste sous 800 Mo.
+  # Nécessite la variable d'environnement SUPABASE_SERVICE_KEY (sinon le robot s'arrête sans rien toucher).
+  $t6 = New-ScheduledTaskTrigger -Once -At (Get-Date).Date.AddMinutes(51) -RepetitionInterval (New-TimeSpan -Hours 2) -RepetitionDuration (New-TimeSpan -Days 3650)
+  Tache "SPE Robot archivage PC" $py "`"$Repo\robots\pc\archiver_stockage.py`"" $t6
+  if (-not $env:SUPABASE_SERVICE_KEY -and -not [Environment]::GetEnvironmentVariable("SUPABASE_SERVICE_KEY", "User")) {
+    Note "A FAIRE : définir SUPABASE_SERVICE_KEY (Supabase > Project Settings > API > service_role) pour activer l'archivage."
+  }
 } else { Note "ATTENTION : Python absent. L'installer puis relancer ce script." }
 
 # 5. Robot WhatsApp Web (Node.js requis : https://nodejs.org LTS). Tourne en continu, redémarre tout seul.
