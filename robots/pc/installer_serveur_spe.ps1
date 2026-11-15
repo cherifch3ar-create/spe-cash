@@ -39,11 +39,16 @@ start "" "$chrome" --remote-debugging-port=9222 --user-data-dir="$Shared\ChromeS
   Note "Lancer-Chrome-SPE.bat créé (profil SPE Robots dans $Shared\ChromeSPE)."
 }
 # NB : ne jamais appeler un paramètre « $args » (variable réservée de PowerShell : la tâche n'était pas créée, 15/11/2026).
+# Administrateur ? Sinon les tâches sont créées pour l'utilisateur courant (niveau normal) : elles marchent pareil
+# pour les robots SPE (« Accès refusé » observé le 15/11/2026 dans une fenêtre non administrateur).
+$EstAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+$Niveau = if ($EstAdmin) { "Highest" } else { "Limited" }
+Note "Mode : $(if ($EstAdmin) { 'administrateur' } else { 'utilisateur (sans administrateur)' })"
 function Tache([string]$nom, [string]$action, [string]$arguments, $declencheur) {
   try {
     $a = New-ScheduledTaskAction -Execute $action -Argument $arguments -WorkingDirectory $Shared -ErrorAction Stop
     $s = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 2) -MultipleInstances IgnoreNew
-    Register-ScheduledTask -TaskName $nom -Action $a -Trigger $declencheur -Settings $s -RunLevel Highest -Force -ErrorAction Stop | Out-Null
+    Register-ScheduledTask -TaskName $nom -Action $a -Trigger $declencheur -Settings $s -RunLevel $Niveau -Force -ErrorAction Stop | Out-Null
     Note "Tâche planifiée installée : $nom"
   } catch { Note "ERREUR tâche « $nom » : $($_.Exception.Message)" }
 }
@@ -96,7 +101,7 @@ timeout /t 30 >nul
 goto boucle
 "@ | Set-Content -Path $wa -Encoding ASCII
   Tache "SPE Robot WhatsApp Web" "cmd.exe" "/c `"$wa`"" (New-ScheduledTaskTrigger -AtLogOn -User $user)
-  Note "Premier lancement à la main pour scanner le QR (numéro dédié SPE) : cd $Repo\robots\whatsapp_web && npm start"
+  Note "Premier lancement à la main pour scanner le QR (numéro dédié SPE) : cd $Repo\robots\whatsapp_web ; npm.cmd start"
 } else { Note "Node.js absent : le robot WhatsApp Web n'est pas installé (installer Node LTS puis relancer)." }
 
 # 6. Mise à jour automatique du dépôt chaque nuit à 03:40.
