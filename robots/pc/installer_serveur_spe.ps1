@@ -54,6 +54,16 @@ function Tache([string]$nom, [string]$action, [string]$arguments, $declencheur) 
 }
 $user = "$env:USERDOMAIN\$env:USERNAME"
 Tache "SPE Serveur - Chrome SPE au demarrage" "cmd.exe" "/c `"$ChromeBat`"" (New-ScheduledTaskTrigger -AtLogOn -User $user)
+# Raccourci sur le Bureau + ouverture tout de suite si Chrome SPE (port 9222) n'est pas déjà ouvert
+# (sinon les robots TUNEPS attendent le prochain redémarrage : constaté le 15/11/2026).
+try {
+  $lnk = (New-Object -ComObject WScript.Shell).CreateShortcut("$env:USERPROFILE\Desktop\Chrome TUNEPS SPE.lnk")
+  $lnk.TargetPath = $ChromeBat; $lnk.WorkingDirectory = $Shared; $lnk.Save()
+  Note "Raccourci « Chrome TUNEPS SPE » créé sur le Bureau."
+} catch { Note "Raccourci Bureau impossible : $($_.Exception.Message)" }
+$port = Get-NetTCPConnection -LocalPort 9222 -State Listen -ErrorAction SilentlyContinue
+if (-not $port) { Start-Process -FilePath $ChromeBat -WorkingDirectory $Shared; Note "Chrome SPE ouvert (TUNEPS + WhatsApp Web)." }
+else { Note "Chrome SPE déjà ouvert." }
 
 # 4. Robots du PC en tâches planifiées (Python requis : https://www.python.org, cocher « Add to PATH »).
 $py = (Get-Command python -ErrorAction SilentlyContinue).Source
