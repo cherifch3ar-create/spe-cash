@@ -33,7 +33,14 @@ METIERS = [
     (("blanchisserie", "buanderie"), "metier_blanchisserie.jpg", "BLANCHISSERIE"),
     (("mecanique", "moteur", "pompe", "compresseur", "froid", "climatisation", "voiture"), "metier_mecanique.jpg", "MÉCANIQUE"),
 ]
-FONTS = ["/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"]
+# Polices : PC Windows d'abord (Segoe UI / Arial), puis Linux (GitHub Actions). Sans police, l'affiche serait illisible.
+FONTS_GRAS = [r"C:\Windows\Fonts\seguibl.ttf", r"C:\Windows\Fonts\segoeuib.ttf", r"C:\Windows\Fonts\arialbd.ttf",
+              "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"]
+FONTS_NORMAL = [r"C:\Windows\Fonts\segoeui.ttf", r"C:\Windows\Fonts\arial.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"]
+FONTS_SYMB = [r"C:\Windows\Fonts\seguisym.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"]
+FONTS = FONTS_GRAS + FONTS_NORMAL
+LOGO_NOIR = os.path.join(ICI, "..", "live", "logo_noir.png")
 
 
 def log(t): print(time.strftime("%H:%M:%S"), t, flush=True)
@@ -52,8 +59,8 @@ def sb(method, chemin, corps=None, prefer=None, binaire=None, ctype=None):
         return r.status, (json.loads(b) if b and b[:1] in (b"[", b"{") else b)
 
 
-def police(taille, gras=True):
-    for f in (FONTS if gras else FONTS[::-1]):
+def police(taille, gras=True, liste=None):
+    for f in (liste or (FONTS_GRAS if gras else FONTS_NORMAL)):
         if os.path.exists(f):
             return ImageFont.truetype(f, taille)
     return ImageFont.load_default()
@@ -110,7 +117,8 @@ def jours(offre):
     except Exception: return None
 
 
-def composer(offre):
+def composer_photo(offre):
+    """Ancien modèle (photo du métier + voile). Gardé : --modele photo."""
     img_nom, categorie = metier_de(offre)
     fond = couvrir(image_metier(img_nom), W, HT)
     # voile sombre en bas pour la lisibilité (charte : texte blanc sur zone sombre)
@@ -167,6 +175,143 @@ def composer(offre):
     return out.getvalue(), categorie
 
 
+BLEU_FONCE = (16, 42, 77); BLEU_VIF = (35, 128, 226); BLEU_CLAIR = (91, 178, 255)
+ROUGE = (204, 32, 39); GRIS_FOND = (241, 244, 248); GRIS_TXT = (90, 102, 120); LIGNE = (226, 231, 238)
+
+
+def _logo_boite(fond, box, rayon):
+    d = ImageDraw.Draw(fond)
+    d.rounded_rectangle(box, radius=rayon, fill=WHITE)
+    x0, y0, x1, y1 = box
+    if os.path.exists(LOGO_NOIR):
+        lg = Image.open(LOGO_NOIR).convert("RGBA")
+        r = min((x1 - x0 - 30) / lg.width, (y1 - y0 - 20) / lg.height)
+        lg = lg.resize((int(lg.width * r), int(lg.height * r)), Image.LANCZOS)
+        fond.alpha_composite(lg, (x0 + (x1 - x0 - lg.width) // 2, y0 + (y1 - y0 - lg.height) // 2))
+    else:
+        f = police(int((y1 - y0) * 0.45))
+        d.text((x0 + 20, y0 + 10), "SPE", font=f, fill=BLEU_FONCE)
+
+
+def _centre(d, y, texte, font, fill, largeur=W):
+    d.text(((largeur - d.textlength(texte, font=font)) / 2, y), texte, font=font, fill=fill)
+
+
+def composer(offre, modele="carte"):
+    """Modèle « carte » demandé par le directeur (15/11/2026, affiche du 30/10 « je veux comme ça ») :
+    en-tête bleu foncé avec logo, bandeau du domaine, titre, tableau Référence / Acheteur / Lieu / Date limite (rouge,
+    « dans N jours ») / Domaine / Procédure, 4 services cochés, bouton « Répondez OUI », pied de page."""
+    if modele == "photo": return composer_photo(offre)
+    _, categorie = metier_de(offre)
+    fond = Image.new("RGBA", (W, HT), GRIS_FOND + (255,))
+    d = ImageDraw.Draw(fond)
+    # en-tête
+    d.rectangle([0, 0, W, 170], fill=BLEU_FONCE)
+    _logo_boite(fond, (40, 28, 330, 142), 18)
+    f1 = police(40); f2 = police(26, False)
+    t1 = "OPPORTUNITÉ D'APPEL D'OFFRES"
+    while d.textlength(t1, font=f1) > W - 380 and f1.size > 26: f1 = police(f1.size - 2)
+    d.text((360, 50), t1, font=f1, fill=WHITE)
+    d.text((360, 104), "MARCHÉS PUBLICS — TUNISIE", font=f2, fill=BLEU_CLAIR)
+    d.rectangle([0, 170, W, 177], fill=BLEU_VIF)
+    # bandeau du domaine (dégradé + rayures)
+    y0, y1 = 177, 440
+    for i in range(W):
+        c = tuple(int(BLEU_FONCE[k] + (BLEU_VIF[k] - BLEU_FONCE[k]) * (0.35 + 0.65 * i / W)) for k in range(3))
+        d.line([(i, y0), (i, y1)], fill=c)
+    ray = Image.new("RGBA", (W, HT), (0, 0, 0, 0)); rd = ImageDraw.Draw(ray)
+    for x in range(-400, W + 400, 26):
+        rd.line([(x, y1), (x + (y1 - y0), y0)], fill=(255, 255, 255, 20), width=2)
+    fond = Image.alpha_composite(fond, ray)
+    d = ImageDraw.Draw(fond)
+    domaine = sans_arabe(offre.get("metier") or "") or categorie.capitalize()
+    fd = police(58)
+    ls = lignes(d, domaine, fd, W - 140, 3)
+    while len(ls) > 2 and fd.size > 36:
+        fd = police(fd.size - 4); ls = lignes(d, domaine, fd, W - 140, 3)
+    y = (y0 + y1) // 2 - len(ls) * (fd.size + 12) // 2
+    for l in ls:
+        _centre(d, y, l, fd, WHITE); y += fd.size + 12
+    # titre
+    titre = sans_arabe(offre.get("objet") or "")
+    if len(titre) < 8: titre = "Appel d'offres — " + categorie.capitalize()
+    ft = police(46)
+    lt = lignes(d, titre, ft, W - 100, 3)
+    while len(lt) > 2 and ft.size > 34:
+        ft = police(ft.size - 2); lt = lignes(d, titre, ft, W - 100, 3)
+    y = 470
+    for l in lt:
+        d.text((50, y), l, font=ft, fill=BLEU_FONCE); y += ft.size + 10
+    # tableau
+    y += 14
+    no = str(offre.get("no") or "")
+    lieu = offre.get("gouvernorat") or offre.get("lieu") or ""
+    if not lieu or nrm(lieu).startswith("a confirmer"): lieu = "à confirmer"
+    lim = str(offre.get("limite") or "")
+    lim_aff = lim.replace(" ", " à ", 1) if re.match(r"\d\d/\d\d/\d{4} \d", lim) else (lim or "à confirmer")
+    j = jours(offre)
+    rangs = [("#", "Référence", no, None), ("⌂", "Acheteur public", sans_arabe(offre.get("acheteur") or "") or "à compléter", None),
+             ("◉", "Lieu d'exécution", sans_arabe(lieu) or "à confirmer", None), ("▦", "Date limite", lim_aff, "date"),
+             ("⚙", "Domaine", domaine, None), ("≡", "Procédure", (offre.get("type") or "à confirmer").capitalize(), None)]
+    # place disponible jusqu'au pied de page : tableau + services (2 x 62) + bouton (86) + marges
+    hr = 64
+    while y + 14 + hr * 6 + 24 + 22 + 124 + 14 + 86 + 16 > HT - 96 and hr > 50: hr -= 2
+    carte = (40, y, W - 40, y + hr * len(rangs) + 24)
+    d.rounded_rectangle(carte, radius=22, fill=WHITE, outline=LIGNE, width=2)
+    fl = police(27, False); fv = police(28, False); fs = police(28, liste=FONTS_SYMB); fb = police(24)
+    yy = y + 12
+    for k, (ic, lab, val, typ) in enumerate(rangs):
+        cy = yy + hr // 2
+        d.ellipse([70, cy - 22, 114, cy + 22], fill=(232, 241, 252))
+        _w = d.textlength(ic, font=fs); d.text((92 - _w / 2, cy - 18), ic, font=fs, fill=BLEU_VIF if typ != "date" else ROUGE)
+        d.text((134, cy - 17), lab, font=fl, fill=GRIS_TXT)
+        vx, vmax = 400, W - 70 - 400
+        if typ == "date":
+            d.text((vx, cy - 18), lim_aff, font=police(30), fill=ROUGE)
+            if j is not None:
+                pas = "aujourd'hui" if j == 0 else ("dans %d jour%s" % (j, "s" if j > 1 else ""))
+                pw = d.textlength(pas, font=fb) + 32
+                d.rounded_rectangle([W - 70 - pw, cy - 22, W - 70, cy + 22], radius=22, fill=ROUGE)
+                d.text((W - 70 - pw + 16, cy - 15), pas, font=fb, fill=WHITE)
+        else:
+            f = police(30) if k == 0 else fv
+            while k and d.textlength(val, font=f) > vmax and f.size > 22: f = police(f.size - 1, False)
+            v = val if d.textlength(val, font=f) <= vmax else lignes(d, val, f, vmax, 1)[0]
+            d.text((vx, cy - f.size // 2 - 2), v, font=f, fill=(25, 30, 40))
+        if k < len(rangs) - 1: d.line([(70, yy + hr), (W - 70, yy + hr)], fill=LIGNE, width=2)
+        yy += hr
+    # services cochés
+    y = carte[3] + 22
+    serv = ["Analyse du cahier des charges", "Étude technique et financière", "Préparation du dossier", "Accompagnement jusqu'au dépôt"]
+    cw = (W - 80 - 20) // 2
+    fsv = police(26)
+    while max(d.textlength(t, font=fsv) for t in serv) > cw - 70 and fsv.size > 18: fsv = police(fsv.size - 1)
+    for k, t in enumerate(serv):
+        x = 40 + (k % 2) * (cw + 20); yb = y + (k // 2) * 62
+        d.rounded_rectangle([x, yb, x + cw, yb + 50], radius=12, fill=(228, 238, 250))
+        d.ellipse([x + 14, yb + 11, x + 42, yb + 39], fill=BLEU_VIF)
+        d.text((x + 20, yb + 9), "✓", font=police(24, liste=FONTS_SYMB), fill=WHITE)
+        f = fsv
+        d.text((x + 54, yb + 25 - f.size // 2 - 2), t, font=f, fill=BLEU_FONCE)
+    # bouton
+    y += 2 * 62 + 14
+    d.rounded_rectangle([40, y, W - 40, y + 86], radius=43, fill=BLEU_FONCE)
+    fbt = police(34)
+    _centre(d, y + 22, "RÉPONDEZ OUI POUR LANCER L'ÉTUDE", fbt, WHITE, W - 60)
+    d.ellipse([W - 40 - 78, y + 8, W - 40 - 8, y + 78], fill=BLEU_VIF)
+    d.text((W - 40 - 64, y + 12), "→", font=police(46, liste=FONTS_SYMB), fill=WHITE)
+    # pied de page
+    yp = HT - 96
+    d.rectangle([0, yp, W, HT], fill=BLEU_FONCE)
+    _logo_boite(fond, (40, yp + 16, 230, yp + 80), 12)
+    d = ImageDraw.Draw(fond)
+    tp = "Votre partenaire pour les marchés publics en Tunisie"; fp = police(28, False)
+    while d.textlength(tp, font=fp) > W - 260 - 30 and fp.size > 18: fp = police(fp.size - 1, False)
+    d.text((260, yp + 48 - fp.size // 2 - 2), tp, font=fp, fill=WHITE)
+    out = io.BytesIO(); fond.convert("RGB").save(out, "PNG", optimize=True)
+    return out.getvalue(), categorie
+
+
 def offres_sans_affiche(maxi):
     st, offres = sb("GET", "/rest/v1/docs?collection=eq.offres&select=id,data&data-%3E%3Etri=gt." + str(ms()) + "&order=data-%3Etri.asc&limit=400")
     st, aff = sb("GET", "/rest/v1/docs?collection=eq.affiches&select=id&limit=2000")
@@ -196,7 +341,7 @@ def publier(offre, png, categorie, essai, sortie):
              "SPE vous accompagne : analyse du cahier des charges, étude technique et financière, préparation du dossier et accompagnement jusqu'au dépôt.\n"
              "Répondez OUI pour lancer l'étude.\nSoft Power Elevation — votre partenaire pour les marchés publics en Tunisie."
              % (offre.get("acheteur", ""), offre.get("objet", ""), no, offre.get("gouvernorat") or offre.get("lieu") or "à compléter", lim, offre.get("metier") or categorie.title()))
-    doc = {"t": t, "no": no, "pdf": "", "png": "/_blob/" + pid, "png_id": pid, "statut": "brouillon", "cree_le": t, "cree_par": "robot_affiches",
+    doc = {"t": t, "no": no, "pdf": "", "png": "/_blob/" + pid, "png_id": pid, "statut": "brouillon", "cree_le": t, "cree_par": "robot_affiches", "modele": "carte",
            "version": 1, "bloquant": False, "modifs": {}, "historique": [], "valide_le": 0, "valide_par": "",
            "sig": "|".join([no, str(offre.get("objet", "")), str(offre.get("acheteur", "")), str(offre.get("gouvernorat", "")), "", lim, str(offre.get("type", "")), str(offre.get("metier", ""))]),
            "texte": texte,
@@ -211,9 +356,41 @@ def publier(offre, png, categorie, essai, sortie):
     return "brouillon"
 
 
+def refaire_brouillons(maxi, essai, sortie):
+    """Refait au modèle « carte » les affiches du ROBOT encore en brouillon et jamais envoyées (offre encore ouverte).
+    Ne touche pas aux affiches validées, modifiées ou faites à la main ; l'ancienne image reste dans « historique »."""
+    st, aff = sb("GET", "/rest/v1/docs?collection=eq.affiches&select=id,data&data-%3E%3Ecree_par=eq.robot_affiches&data-%3E%3Estatut=eq.brouillon&limit=2000")
+    cibles = [r for r in aff if not r["data"].get("envoye_wa") and r["data"].get("modele") != "carte" and not r["data"].get("modifs")]
+    n = 0
+    for r in cibles:
+        if n >= maxi: break
+        st, rows = sb("GET", "/rest/v1/docs?collection=eq.offres&select=data&id=eq." + urllib.parse.quote(r["id"]))
+        if not rows: continue
+        o = rows[0]["data"]; o.setdefault("no", r["id"])
+        try:
+            if int(o.get("tri") or 0) < ms(): continue
+        except (TypeError, ValueError): continue
+        png, cat = composer(o)
+        pid = hashlib.md5(png).hexdigest()
+        if sortie:
+            os.makedirs(sortie, exist_ok=True)
+            open(os.path.join(sortie, re.sub(r"\W", "_", r["id"]) + ".png"), "wb").write(png)
+        if not essai:
+            sb("POST", "/storage/v1/object/blobs/" + pid, binaire=png, ctype="image/png")
+            d = dict(r["data"]); t = ms()
+            d["historique"] = (d.get("historique") or []) + [{"t": t, "par": "robot_affiches", "ancien_png": d.get("png"), "raison": "modèle carte (directeur, 15/11/2026)"}]
+            d.update({"png": "/_blob/" + pid, "png_id": pid, "modele": "carte", "version": int(d.get("version") or 1) + 1})
+            sb("POST", "/rest/v1/docs?on_conflict=collection,id", {"collection": "affiches", "id": r["id"], "data": d, "maj": t, "source": "robot_affiches"},
+               prefer="resolution=merge-duplicates,return=minimal")
+        n += 1; log("  ~ %s refaite au modèle carte" % r["id"])
+    return n
+
+
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--max", type=int, default=10); ap.add_argument("--essai", action="store_true"); ap.add_argument("--sortie", default="")
+    ap.add_argument("--refaire", type=int, default=5, help="nombre de brouillons robot à refaire au modèle carte par passage (0 = aucun)")
     a = ap.parse_args()
+    if a.refaire: log("%d brouillon(s) refait(s) au modèle carte" % refaire_brouillons(a.refaire, a.essai, a.sortie))
     L = offres_sans_affiche(a.max)
     log("%d offre(s) sans affiche à traiter" % len(L))
     n, err = 0, 0

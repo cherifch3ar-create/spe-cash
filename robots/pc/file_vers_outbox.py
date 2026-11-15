@@ -47,6 +47,21 @@ def groupe_de(d, offres):
     return DEFAUT
 
 
+def legende_courte(d, o, no):
+    """Légende courte et chaleureuse sous l'affiche (modèle donné par le directeur le 15/11/2026) :
+    « Une belle opportunité au port de Radès : le S20261009977, réparation des murettes en béton armé. »"""
+    dn = d.get("donnees") or {}
+    objet = re.sub(r"[\u0600-\u06FF]+|\(\s*\)", "", str(dn.get("titre") or o.get("objet") or "")).strip(" -–—:,")
+    if len(objet) > 140: objet = objet[:137].rsplit(" ", 1)[0] + "…"
+    lieu = str(dn.get("lieu") or o.get("gouvernorat") or "").replace("(à confirmer)", "").strip()
+    lim = str(dn.get("limite") or o.get("limite") or "")
+    t = dn.get("limite_t") or o.get("tri"); j = ""
+    try: j = " (J-%d)" % max(0, int((int(t) - ms()) // 86400000))
+    except (TypeError, ValueError): pass
+    l1 = "Une belle opportunité%s : le %s, %s." % ((" à " + lieu) if lieu and not lieu.lower().startswith("à confirmer") else "", no, objet[:1].lower() + objet[1:] if objet else "voir l'affiche")
+    return l1 + ("\nDate limite : %s%s." % (lim, j) if lim else "") + "\nTout est dans l'application SPE."
+
+
 def numero(d): return d.get("no") or (re.search(r"\b[S]?\d{11}\b", d.get("texte", "") or "") or [""])[0]
 
 
@@ -113,6 +128,8 @@ def main():
         if n_aff >= a.max: break
         d = r.get("data") or {}
         if d.get("envoye_wa") or memo.get("aff|" + r["id"]): continue
+        # brouillons du robot : seulement au modèle « carte » (demande du directeur du 15/11/2026)
+        if d.get("cree_par") == "robot_affiches" and d.get("statut") == "brouillon" and d.get("modele") != "carte": continue
         no = d.get("no") or r["id"]; o = offres.get(no, {})
         if o.get("tri") and int(o["tri"]) < ms() + 3 * 86400000: continue
         g = o.get("groupe") if o.get("groupe") in GROUPES else PAR_METIER.get(o.get("metier") or (d.get("donnees") or {}).get("domaine"), DEFAUT)
@@ -128,7 +145,7 @@ def main():
                 with urllib.request.urlopen(url, timeout=60) as rr: png = rr.read()
             else: continue
         except Exception as ex: log("  affiche illisible %s : %s" % (r["id"], ex)); continue
-        legende = (d.get("texte") or "")[:900] + ("\n\n" + MENU if g != "SPE Réunion agents" else "")
+        legende = legende_courte(d, o, no) + ("\n\n" + MENU if g != "SPE Réunion agents" else "")
         deposer("pont_%d_aff_%s.json" % (ms(), re.sub(r"\W", "_", no)), {"groupe": g, "fichier_base64": base64.b64encode(png).decode(), "nom_fichier": "affiche_%s.png" % no, "legende": legende, "agent": "amine"}, a.essai)
         memo["aff|" + r["id"]] = t; memo[no + "|" + g] = t; n_aff += 1; envoyes += 1
         if not a.essai:
