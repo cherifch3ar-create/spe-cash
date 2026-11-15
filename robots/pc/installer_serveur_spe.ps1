@@ -54,6 +54,8 @@ function Tache([string]$nom, [string]$action, [string]$arguments, $declencheur) 
 }
 $user = "$env:USERDOMAIN\$env:USERNAME"
 Tache "SPE Serveur - Chrome SPE au demarrage" "cmd.exe" "/c `"$ChromeBat`"" (New-ScheduledTaskTrigger -AtLogOn -User $user)
+# Vérification complète à chaque ouverture de session (Chrome SPE, Chrome WhatsApp, application Claude, robots, journal).
+Tache "SPE Serveur - demarrage" "powershell.exe" "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$Repo\robots\pc\demarrage_spe.ps1`"" (New-ScheduledTaskTrigger -AtLogOn -User $user)
 # Raccourci sur le Bureau + ouverture tout de suite si Chrome SPE (port 9222) n'est pas déjà ouvert
 # (sinon les robots TUNEPS attendent le prochain redémarrage : constaté le 15/11/2026).
 try {
