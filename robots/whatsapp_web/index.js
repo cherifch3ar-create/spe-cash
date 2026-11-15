@@ -16,7 +16,8 @@ async function sb(method, chemin, corps, prefer) {
 }
 function silence() { const h = new Date().getHours(); const [a, b] = CFG.heures_silence; return a > b ? (h >= a || h < b) : (h >= a && h < b); }
 function lireEnvoyes() { try { return JSON.parse(fs.readFileSync(ENVOYES, 'utf8')); } catch { return {}; } }
-function cle(d, groupe) { const no = (d.no || (String(d.texte || '').match(/\b[S]?\d{11}\b/) || [''])[0]); return no ? no + '|' + groupe : ''; }
+// Clé anti-doublon : N° + groupe + type (l'annonce écrite ET l'affiche d'une même offre partent toutes les deux ; les tests ne bloquent rien).
+function cle(d, groupe) { if (d.test) return ''; const no = (d.no || (String(d.texte || '').match(/\b[S]?\d{11}\b/) || [''])[0]); return no ? no + '|' + groupe + '|' + (d.type || 'texte') : ''; }
 
 async function fichierDepuis(d) {
   const url = d.lien_pdf || d.lien_image || (d.png && d.png.startsWith('/_blob/') ? CFG.supabase_url + '/storage/v1/object/public/blobs/' + d.png.slice(7) : d.png);
@@ -60,7 +61,26 @@ async function passage(client, chats) {
 
 (async () => {
   const client = new Client({ authStrategy: new LocalAuth({ dataPath: path.join(__dirname, '.wwebjs_auth') }), puppeteer: { headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] } });
-  client.on('qr', qr => { log('Scanner ce QR avec le numéro dédié SPE :'); qrcode.generate(qr, { small: true }); });
+  // Connexion : QR à scanner, OU code à 8 caractères (utile quand on regarde le PC à distance depuis le téléphone).
+  let demande = false;
+  client.on('qr', async qr => {
+    log('Scanner ce QR avec le numéro dédié SPE :'); qrcode.generate(qr, { small: true });
+    if (demande) return; demande = true;
+    let num = String(CFG.numero_pairage || process.env.SPE_NUMERO || '').replace(/\D/g, '');
+    if (!num) {
+      const rl = require('readline').createInterface({ input: process.stdin, output: process.stdout });
+      num = await new Promise(r => rl.question('\nOU BIEN, sans scanner : tapez le numéro WhatsApp SPE avec 216 devant (ex. 21612345678) puis Entrée : ', x => { rl.close(); r(String(x).replace(/\D/g, '')); }));
+    }
+    if (num.length < 8) { log('Pas de numéro : scannez le QR.'); return; }
+    try {
+      const code = await client.requestPairingCode(num);
+      log('================================================');
+      log('CODE DE CONNEXION : ' + code);
+      log('Sur le téléphone SPE : WhatsApp > Appareils connectés > Connecter un appareil >');
+      log('« Connecter avec le numéro de téléphone » puis tapez ce code.');
+      log('================================================');
+    } catch (e) { log('Code impossible (' + e.message + ') : scannez le QR.'); }
+  });
   client.on('ready', async () => {
     log('WhatsApp connecté');
     const tous = await client.getChats(); const chats = {};

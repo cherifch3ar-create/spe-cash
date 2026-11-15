@@ -21,3 +21,4 @@ les décisions et les plans, et les robots nouveaux vont dans `robots/` du dép�
 | `../robots/telegram_file.py` (+ `robot-telegram.yml`) | Canal de secours Telegram (officiel, gratuit) : actif dès que le secret `TELEGRAM_BOT_TOKEN` existe et que `telegram_groupes.json` est rempli. |
 | `../robots/whatsapp_web/` | Robot WhatsApp Web pour une machine toujours allumée (numéro dédié) : `install.sh`, `index.js`, `config.json`. Non testé depuis le cloud. |
 - `09_SOLUTION_ESPACE_100MO.md` : solution pour que la limite de 100 Mo de SPE Live ne bloque plus.
+- `10_MODELES_MESSAGES_WHATSAPP.md` : les six modèles de messages WhatsApp, le chemin unique et le test.
