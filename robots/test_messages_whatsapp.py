@@ -56,8 +56,38 @@ def pdf_test(o):
     return A.SB + "/storage/v1/object/public/blobs/" + pid
 
 
+def spelive_ecrire(dossier, k, t, code, typ, data, extra):
+    """Ancienne session qui marche (directeur, 15/11/2026 : « je ne suis pas devant le PC ») : Amine envoie la file
+    « file_whatsapp » de SPE Live avec le WhatsApp Web déjà connecté. Fichiers = parties base64 dans « pdf_parts »."""
+    import base64, hashlib
+    os.makedirs(dossier, exist_ok=True)
+    doc_id = "f-%d-test%d" % (t + k, k + 1)
+    w = {"t": t + k, "agent": "test", "destinataire": data["groupe"], "groupe": data["groupe"], "copie": "", "type": typ,
+         "texte": data["texte"], "priorite": 1, "statut": "en_attente", "essais": 0, "nom_fichier": "", "parts": 0}
+    fichier = None
+    if "png_test" in extra:
+        png, _ = A.composer(extra["png_test"])
+        from PIL import Image
+        im = Image.open(io.BytesIO(png)).convert("RGB"); out = io.BytesIO(); im.save(out, "JPEG", quality=80, optimize=True)
+        fichier = out.getvalue(); w["nom_fichier"] = "affiche_%s.jpg" % extra["png_test"]["no"]; w["no"] = extra["png_test"]["no"]
+    if "pdf_test" in extra:
+        import urllib.request
+        fichier = urllib.request.urlopen(pdf_test(extra["pdf_test"]), timeout=60).read(); w["nom_fichier"] = "Etude_TEST_%s.pdf" % extra["pdf_test"]["no"]
+    ecr = []
+    if fichier:
+        b64 = base64.b64encode(fichier).decode(); parts = [b64[i:i + 180000] for i in range(0, len(b64), 180000)]
+        w["parts"] = len(parts)
+        for i, p in enumerate(parts, 1):
+            f = os.path.join(dossier, "w_%s_p%d.json" % (doc_id, i)); json.dump({"base64": p, "partie": i, "total": len(parts)}, open(f, "w"))
+            ecr.append({"op": "set", "collection": "pdf_parts", "doc_id": "%s_p%d" % (doc_id, i), "file_path": f})
+    f = os.path.join(dossier, "w_%s.json" % doc_id); json.dump(w, open(f, "w"), ensure_ascii=False)
+    ecr.append({"op": "set", "collection": "file_whatsapp", "doc_id": doc_id, "file_path": f})
+    json.dump(ecr, open(os.path.join(dossier, "lot_%d_%s.json" % (k, code)), "w"), indent=0)
+
+
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--envoyer", action="store_true"); ap.add_argument("--groupe", default="SPE Réunion agents")
+    ap.add_argument("--spelive", default="", help="dossier : prépare les 6 tests pour la file d'Amine (SPE Live) au lieu de Supabase")
     a = ap.parse_args()
     offres = offres_ouvertes(3)
     if len(offres) < 2: print("Pas assez d'offres ouvertes pour le test."); return 1
@@ -86,10 +116,14 @@ def main():
         if "pdf_test" in extra:
             data.update({"lien_pdf": pdf_test(extra["pdf_test"]) if a.envoyer else "(lien PDF créé à l'envoi)", "nom_fichier": "Etude_TEST_%s.pdf" % extra["pdf_test"]["no"]})
         print("— %s (%s) —\n%s\n" % (code, typ, data["texte"]))
+        if a.spelive:
+            spelive_ecrire(a.spelive, k, t, code, typ, data, extra)
+            continue
         if a.envoyer:
             A.sb("POST", "/rest/v1/docs?on_conflict=collection,id", {"collection": "file_whatsapp", "id": "test-%d-%s" % (t, code), "maj": t + k,
                                                                     "source": "test_messages", "data": data}, prefer="resolution=ignore-duplicates,return=minimal")
             ecrits += 1
+    if a.spelive: print("Tests préparés pour la file d'Amine dans %s" % a.spelive); return 0
     print("%d message(s) de test mis dans la file pour « %s »." % (ecrits, a.groupe) if a.envoyer else "(essai : rien écrit — ajouter --envoyer)")
     return 0
 

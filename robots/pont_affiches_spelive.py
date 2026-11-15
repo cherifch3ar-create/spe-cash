@@ -107,6 +107,7 @@ def preparer(a):
         ok_robot = d.get("cree_par") == "robot_affiches" and d.get("statut") == "brouillon" and \
             not any(c.get("bloquant") and not c.get("ok") for c in d.get("controles") or [])
         if not (ok_robot or d.get("statut") == "valide"): continue
+        if ok_robot and d.get("modele") != "carte": continue  # seulement le modèle « carte » (directeur, 15/11/2026)
         t = (d.get("donnees") or {}).get("limite_t") or o.get("tri")
         try: t = int(t)
         except (TypeError, ValueError): continue
@@ -149,6 +150,13 @@ def marquer(a):
     n = 0
     for p in plan:
         if patch_affiche(p["no"], {"envoye_wa": "en_file", "file_whatsapp": p["doc_id"], "en_file_le": ms()}): n += 1
+        # même affiche déjà mise dans la file Supabase du robot WhatsApp Web : la retirer de l'envoi (pas de double)
+        rows = get("/rest/v1/docs?collection=eq.file_whatsapp&id=eq.aff-%s&select=data" % urllib.parse.quote(p["no"]))
+        if rows and rows[0]["data"].get("statut") == "en_attente":
+            d = rows[0]["data"]; d.update({"statut": "via_amine", "via": p["doc_id"]})
+            h = dict(H, **{"Content-Type": "application/json", "Prefer": "return=minimal"})
+            urllib.request.urlopen(urllib.request.Request(SB + "/rest/v1/docs?collection=eq.file_whatsapp&id=eq.aff-" + urllib.parse.quote(p["no"]),
+                                   data=json.dumps({"data": d, "maj": ms()}).encode(), headers=h, method="PATCH"), timeout=60).read()
     print("%d affiches marquées en_file" % n)
     return 0
 
