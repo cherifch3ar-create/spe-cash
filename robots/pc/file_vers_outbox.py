@@ -20,6 +20,11 @@ MEMO = os.path.join(os.path.dirname(OUTBOX), "pont_envoyes.json")  # anti-doublo
 GROUPES = {"appel d'offre SPE", "AO SPE Électrique", "AO SPE Mécanique", "AO SPE Portail", "AO SPE Surveillance caméra et alarme",
            "AO SPE Métal construction", "AO SPE Peinture", "AO SPE Maritime", "AO SPE Engins, levage et hydraulique", "SPE Réunion agents"}
 DEFAUT = "appel d'offre SPE"
+AFFICHES_PC = os.path.join(os.path.dirname(OUTBOX), "affiches")  # affiches fabriquées et gardées sur le PC
+PAR_METIER = {"Ascenseurs": "AO SPE Mécanique", "Portail": "AO SPE Portail", "Surveillance, alarme, incendie": "AO SPE Surveillance caméra et alarme",
+              "Électrique": "AO SPE Électrique", "Variateurs et équipements industriels": "AO SPE Électrique", "Mécanique": "AO SPE Mécanique",
+              "Métal construction": "AO SPE Métal construction", "Peinture": "AO SPE Peinture", "Maritime": "AO SPE Maritime",
+              "Engins, levage et hydraulique": "AO SPE Engins, levage et hydraulique"}
 MENU = "Répondez avec le chiffre + N° : 1 fiche de visite · 2 étudier · 3 cahier des charges · 4 sûr ou non · 5 rappel demain"
 
 
@@ -110,13 +115,18 @@ def main():
         if d.get("envoye_wa") or memo.get("aff|" + r["id"]): continue
         no = d.get("no") or r["id"]; o = offres.get(no, {})
         if o.get("tri") and int(o["tri"]) < ms() + 3 * 86400000: continue
-        g = o.get("groupe") if o.get("groupe") in GROUPES else DEFAUT
+        g = o.get("groupe") if o.get("groupe") in GROUPES else PAR_METIER.get(o.get("metier") or (d.get("donnees") or {}).get("domaine"), DEFAUT)
         if memo.get(no + "|" + g): continue
+        # 1) l'affiche gardée sur le PC (robot affiches local, dossier SPE_shared\affiches) ; 2) sinon Supabase.
+        local = os.path.join(AFFICHES_PC, re.sub(r"\W", "_", no) + ".png")
         url = d.get("png") or ""
         if url.startswith("/_blob/"): url = SB + "/storage/v1/object/public/blobs/" + url[7:]
-        if not url: continue
         try:
-            with urllib.request.urlopen(url, timeout=60) as rr: png = rr.read()
+            if os.path.exists(local):
+                png = open(local, "rb").read()
+            elif url:
+                with urllib.request.urlopen(url, timeout=60) as rr: png = rr.read()
+            else: continue
         except Exception as ex: log("  affiche illisible %s : %s" % (r["id"], ex)); continue
         legende = (d.get("texte") or "")[:900] + ("\n\n" + MENU if g != "SPE Réunion agents" else "")
         deposer("pont_%d_aff_%s.json" % (ms(), re.sub(r"\W", "_", no)), {"groupe": g, "fichier_base64": base64.b64encode(png).decode(), "nom_fichier": "affiche_%s.png" % no, "legende": legende, "agent": "amine"}, a.essai)
