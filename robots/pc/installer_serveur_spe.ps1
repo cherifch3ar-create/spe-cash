@@ -90,7 +90,7 @@ if ($py) {
 # 5. Robot WhatsApp Web (Node.js requis : https://nodejs.org LTS). Tourne en continu, redémarre tout seul.
 $node = (Get-Command node -ErrorAction SilentlyContinue).Source
 if ($node) {
-  Push-Location "$Repo\robots\whatsapp_web"; npm install --omit=dev --silent 2>$null; Pop-Location
+  Push-Location "$Repo\robots\whatsapp_web"; npm.cmd install --omit=dev --silent 2>$null; Pop-Location
   $wa = "$Shared\Lancer-WhatsApp-Robot.bat"
   @"
 @echo off
