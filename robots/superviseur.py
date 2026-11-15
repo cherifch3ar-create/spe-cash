@@ -40,6 +40,37 @@ def events_depuis(heures):
     return rows or []
 
 
+# Version de l'installation du PC. L'augmenter fait relancer l'installateur UNE fois sur le PC, à distance
+# (le directeur travaille à distance et ne peut rien faire sur le PC : décision du 15/11/2026, « vas-y, go »).
+VERSION_PC = "2026-11-15-demarrage"
+
+
+def maintenance_pc():
+    """Seulement sur le PC Windows : met le dépôt à jour, puis relance l'installateur si sa version a changé."""
+    if os.name != "nt": return
+    import subprocess
+    depot = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+    shared = os.environ.get("SPE_SHARED", r"C:\Users\USER\Desktop\01_SPE\SPE_shared")
+    marque = os.path.join(shared, "installe_version.txt")
+    try: subprocess.run(["git", "-C", depot, "pull", "-q"], timeout=300)
+    except Exception as e: log("git pull impossible : %s" % e)
+    deja = open(marque, encoding="utf-8").read().strip() if os.path.exists(marque) else ""
+    if deja == VERSION_PC: return
+    ps1 = os.path.join(depot, "robots", "pc", "installer_serveur_spe.ps1")
+    if not os.path.exists(ps1): return
+    log("Installation du PC à la version %s…" % VERSION_PC)
+    r = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ps1], timeout=1800, capture_output=True, text=True, errors="replace")
+    os.makedirs(shared, exist_ok=True)
+    open(marque, "w", encoding="utf-8").write(VERSION_PC)
+    erreurs = [l for l in (r.stdout or "").splitlines() if "ERREUR" in l or "ATTENTION" in l]
+    t = ms()
+    try:
+        sb("POST", "/rest/v1/docs", {"collection": "events", "id": "e-%d-installation-pc" % t, "maj": t, "source": "superviseur_pc",
+                                      "data": {"t": t, "agent": "superviseur", "texte": "Installation du PC faite à distance (version %s)%s" % (
+                                          VERSION_PC, " — " + " | ".join(erreurs)[:600] if erreurs else " — aucune erreur.")}}, prefer="return=minimal")
+    except Exception as e: log("journal impossible : %s" % e)
+
+
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--essai", action="store_true"); a = ap.parse_args()
     ev = events_depuis(12)
@@ -95,4 +126,6 @@ def main():
 
 
 if __name__ == "__main__":
+    try: maintenance_pc()
+    except Exception as e: log("maintenance PC : %s" % e)
     sys.exit(main())
