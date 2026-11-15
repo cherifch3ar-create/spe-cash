@@ -61,7 +61,26 @@ async function passage(client, chats) {
 
 (async () => {
   const client = new Client({ authStrategy: new LocalAuth({ dataPath: path.join(__dirname, '.wwebjs_auth') }), puppeteer: { headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] } });
-  client.on('qr', qr => { log('Scanner ce QR avec le numéro dédié SPE :'); qrcode.generate(qr, { small: true }); });
+  // Connexion : QR à scanner, OU code à 8 caractères (utile quand on regarde le PC à distance depuis le téléphone).
+  let demande = false;
+  client.on('qr', async qr => {
+    log('Scanner ce QR avec le numéro dédié SPE :'); qrcode.generate(qr, { small: true });
+    if (demande) return; demande = true;
+    let num = String(CFG.numero_pairage || process.env.SPE_NUMERO || '').replace(/\D/g, '');
+    if (!num) {
+      const rl = require('readline').createInterface({ input: process.stdin, output: process.stdout });
+      num = await new Promise(r => rl.question('\nOU BIEN, sans scanner : tapez le numéro WhatsApp SPE avec 216 devant (ex. 21612345678) puis Entrée : ', x => { rl.close(); r(String(x).replace(/\D/g, '')); }));
+    }
+    if (num.length < 8) { log('Pas de numéro : scannez le QR.'); return; }
+    try {
+      const code = await client.requestPairingCode(num);
+      log('================================================');
+      log('CODE DE CONNEXION : ' + code);
+      log('Sur le téléphone SPE : WhatsApp > Appareils connectés > Connecter un appareil >');
+      log('« Connecter avec le numéro de téléphone » puis tapez ce code.');
+      log('================================================');
+    } catch (e) { log('Code impossible (' + e.message + ') : scannez le QR.'); }
+  });
   client.on('ready', async () => {
     log('WhatsApp connecté');
     const tous = await client.getChats(); const chats = {};
