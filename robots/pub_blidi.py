@@ -29,6 +29,31 @@ def photo(i):
     return Image.new("RGB", (1080, 900), (60, 80, 110))
 
 
+LOGO_BLIDI = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "logo_blidi.png")
+
+
+def logo_blidi(im, box, fonce, accent):
+    """Logo Blidi Ascenseurs : le fichier robots/assets/logo_blidi.png s'il existe, sinon un logo en lettres
+    (icône de cabine avec flèches haut/bas + BLIDI / ASCENSEURS)."""
+    d = ImageDraw.Draw(im); x0, y0, x1, y1 = box
+    d.rounded_rectangle(box, radius=18, fill=(255, 255, 255))
+    if os.path.exists(LOGO_BLIDI):
+        lg = Image.open(LOGO_BLIDI).convert("RGBA")
+        r = min((x1 - x0 - 24) / lg.width, (y1 - y0 - 16) / lg.height)
+        lg = lg.resize((int(lg.width * r), int(lg.height * r)), Image.LANCZOS)
+        im.alpha_composite(lg, (x0 + (x1 - x0 - lg.width) // 2, y0 + (y1 - y0 - lg.height) // 2)); return
+    h = y1 - y0; cx0 = x0 + 18; cw = int(h * 0.62)
+    d.rounded_rectangle([cx0, y0 + 14, cx0 + cw, y1 - 14], radius=8, outline=fonce, width=5)
+    m = cx0 + cw // 2
+    d.polygon([(m, y0 + 26), (m - 14, y0 + 46), (m + 14, y0 + 46)], fill=accent)
+    d.polygon([(m, y1 - 26), (m - 14, y1 - 46), (m + 14, y1 - 46)], fill=fonce)
+    tx = cx0 + cw + 16
+    f1 = A.police(int(h * 0.42)); f2 = A.police(int(h * 0.17), False)
+    while d.textlength("BLIDI", font=f1) > x1 - tx - 14 and f1.size > 20: f1 = A.police(f1.size - 2)
+    d.text((tx, y0 + int(h * 0.12)), "BLIDI", font=f1, fill=fonce)
+    d.text((tx + 2, y0 + int(h * 0.62)), "ASCENSEURS", font=f2, fill=accent if sum(accent) < 600 else fonce)
+
+
 def composer(titre, points, theme):
     W, H = 1080, 1350
     fonce, accent = THEMES[theme % len(THEMES)]
@@ -39,8 +64,8 @@ def composer(titre, points, theme):
     voile = Image.new("RGBA", (W, H), (0, 0, 0, 0)); vd = ImageDraw.Draw(voile)
     for y in range(420, 780): vd.line([(0, y), (W, y)], fill=fonce + (int(255 * ((y - 420) / 360) ** 1.4),))
     im = Image.alpha_composite(im, voile); d = ImageDraw.Draw(im)
-    A._logo_boite(im, (40, 36, 330, 150), 18); d = ImageDraw.Draw(im)
-    fb = A.police(34); tag = "BLIDI ASCENSEURS"
+    logo_blidi(im, (40, 36, 400, 160), fonce, accent); d = ImageDraw.Draw(im)
+    fb = A.police(30); tag = "Ascenseurs · Monte-charges"
     tw = d.textlength(tag, font=fb); d.rounded_rectangle([W - 60 - tw - 40, 60, W - 60, 120], radius=30, fill=accent)
     d.text((W - 60 - tw - 20, 70), tag, font=fb, fill=fonce)
     ft = A.police(64); lt = A.lignes(d, titre, ft, W - 120, 3)
