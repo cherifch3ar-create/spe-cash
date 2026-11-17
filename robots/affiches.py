@@ -98,7 +98,7 @@ def couvrir(im, w, h):
 
 
 def lignes(draw, texte, font, largeur, maxl=3):
-    mots, out, cur = texte.split(), [], ""
+    mots, out, cur = [m for m in texte.split(" ") if m], [], ""  # coupe seulement sur les espaces normales (pas les insécables)
     for m in mots:
         t = (cur + " " + m).strip()
         if draw.textlength(t, font=font) <= largeur: cur = t
